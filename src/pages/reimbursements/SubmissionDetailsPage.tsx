@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import Header from '../../components/common/Header';
-import Sidebar from '../../components/common/Sidebar';
+
 import EmployeeDetailsCard from '../../components/reimbursements/EmployeeDetailsCard';
 import SubmissionTable from '../../components/reimbursements/SubmissionTable';
 import { useParams } from 'react-router-dom';
@@ -9,7 +8,7 @@ import { supabase } from '../../supabaseClient';
 
 
 const SubmissionDetailsPage: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // const [sidebarOpen, setSidebarOpen] = useState(false);
    const { employeeId } = useParams<{ employeeId: string }>();
 const [reimbursements, setReimbursements] = useState<SubmissionItem[]>([]);
 
@@ -47,9 +46,9 @@ useEffect(() => {
 
   return (
     <div className="flex">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {/* <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} /> */}
       <div className="flex-1">
-        <Header />
+        {/* <Header /> */}
 
         <div className="p-4">
           {/* Page Heading */}

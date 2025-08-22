@@ -1,20 +1,19 @@
-import React, { useState } from 'react';
-import Header from '../../components/common/Header';
-import Sidebar from '../../components/common/Sidebar';
+import React from 'react';
+
 import SettingsSidebar from '../../components/settings/SettingsSidebar';
 import DepartmentsTable from '../../components/settings/DepartmentsTable';
 
 const SettingsDepartmentsPage: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex">
       {/* Main Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {/* <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} /> */}
 
       <div className="flex-1">
         {/* Top Header */}
-        <Header />
+        {/* <Header /> */}
 
         {/* Main Settings Page */}
         <div className="flex p-6 space-x-4">

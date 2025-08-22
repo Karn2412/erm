@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import PaySlipCard from "../../components/payslip/PaySlipCard";
-import StaffSidebar from "../../components/common/StaffSidebar";
-import Header from "../../../components/common/Header";
+
 import { supabase } from "../../../supabaseClient";
 import { useUser } from "../../../context/UserContext";
  // staff context
@@ -20,7 +19,7 @@ interface PayrollHistory {
 }
 
 const PayRunsPage = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+ 
   const [payrolls, setPayrolls] = useState<PayrollHistory[]>([]);
   const { userData } = useUser(); // ✅ current logged-in staff
 
@@ -46,13 +45,13 @@ const PayRunsPage = () => {
   }, [userData]);
 
   return (
-    <div className="flex">
-      {/* Sidebar */}
-      <StaffSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    
+      
 
-      {/* Main Content */}
       <div className="flex flex-col w-full">
-        <Header />
+      {/* Main Content */}
+      {/* <StaffSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} /> */}
+        {/* <Header /> */}
 
         <div className="p-6 bg-blue-50">
           {/* Page Header */}
@@ -89,7 +88,7 @@ const PayRunsPage = () => {
           </div>
         </div>
       </div>
-    </div>
+    
   );
 };
 

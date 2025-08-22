@@ -1,5 +1,5 @@
 // src/components/staff reimbursement/StaffReimbursementTable.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../../../supabaseClient";
 import toast from "react-hot-toast";
 
@@ -13,7 +13,7 @@ interface Reimbursement {
   expense_date: string;
   description: string | null;
   amount: number;
-  receipt_path: string | null;
+  receipt_url: string | null;
   status: string;
   proofUrl?: string | null;
 }
@@ -52,7 +52,7 @@ const ReimbursementTable: React.FC<Props> = ({ refresh }) => {
       (data || []).map(async (item) => {
         if (item.receipt_url) {
           const { data: signed } = await supabase.storage
-            .from("reimbursement") // ✅ correct bucket
+            .from("reimbursement")
             .createSignedUrl(item.receipt_url, 60 * 60 * 24);
           return { ...item, proofUrl: signed?.signedUrl };
         }
@@ -97,74 +97,94 @@ const ReimbursementTable: React.FC<Props> = ({ refresh }) => {
     fetchData();
   }
 
+  // ✅ Check if at least one row is pending → controls header + layout
+  const hasPending = useMemo(() => data.some((item) => item.status === "PENDING"), [data]);
+
   return (
     <div className="bg-white mt-8 rounded-2xl shadow-sm p-6">
-      <h3 className="text-base font-semibold mb-4 text-gray-800">
+      <h3 className="text-lg font-semibold mb-4 text-gray-800  pb-2">
         Previous Submissions
       </h3>
 
-      <div className="grid grid-cols-9 text-xs font-semibold text-gray-500 px-4 pb-2">
-        <div>Sl no</div>
+      {/* Table Header */}
+      <div
+        className={`grid ${
+          hasPending ? "grid-cols-9" : "grid-cols-7"
+        } text-xs font-semibold text-gray-600 px-4 py-2`}
+      >
+        <div>Sl No</div>
         <div>Type</div>
         <div>Date</div>
         <div>Description</div>
         <div>Amount</div>
         <div>Proof</div>
         <div>Status</div>
-        <div>Edit</div>
-        <div>Delete</div>
+        {hasPending && <div>Edit</div>}
+        {hasPending && <div>Delete</div>}
       </div>
 
-      <div className="space-y-3">
-        {data.map((item, i) => (
-          <div
-            key={item.id}
-            className="grid grid-cols-9 items-center bg-blue-50 rounded-xl px-4 py-3 shadow-sm hover:shadow-md transition-all"
-          >
-            <div>{i + 1}</div>
-            <div>{item.category}</div>
-            <div>{new Date(item.expense_date).toLocaleDateString()}</div>
-            <div className="truncate">{item.description}</div>
-            <div>₹{item.amount}</div>
-            <div>
-              {item.proofUrl ? (
-                <a
-                  href={item.proofUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-1 bg-blue-200 text-sm rounded-full text-gray-700 flex items-center gap-1"
-                >
-                  View 👁️
-                </a>
-              ) : (
-                "-"
+      {/* Table Rows */}
+      <div className="mt-2 space-y-3">
+        {data.map((item, i) => {
+          const showActions = item.status === "PENDING";
+          return (
+            <div
+              key={item.id}
+              className={`grid ${
+                hasPending ? "grid-cols-9" : "grid-cols-7"
+              } items-center px-4 py-3 text-sm rounded-xl bg-gray-50 shadow-sm hover:shadow-md transition`}
+            >
+              <div>{i + 1}</div>
+              <div className="font-medium">{item.category}</div>
+              <div>{new Date(item.expense_date).toLocaleDateString()}</div>
+              <div className="truncate text-gray-600">{item.description || "-"}</div>
+              <div className="font-semibold">₹{item.amount}</div>
+              <div>
+                {item.proofUrl ? (
+                  <a
+                    href={item.proofUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    View
+                  </a>
+                ) : (
+                  "-"
+                )}
+              </div>
+              <div className={`font-medium ${getStatusColor(item.status)}`}>
+                {item.status}
+              </div>
+
+              {/* Action Buttons */}
+              {hasPending && (
+                <>
+                  <div>
+                    {showActions && (
+                      <button
+                        onClick={() => handleEdit(item)}
+                        className="px-3 py-1 text-xs rounded-full bg-yellow-200 hover:bg-yellow-300 text-yellow-800"
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                  <div>
+                    {showActions && (
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="px-3 py-1 text-xs rounded-full bg-red-200 hover:bg-red-300 text-red-800"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </>
               )}
             </div>
-            <div className={`font-medium ${getStatusColor(item.status)}`}>
-              {item.status}
-            </div>
-            <div>
-              {item.status === "PENDING" && (
-                <button
-                  onClick={() => handleEdit(item)}
-                  className="px-3 py-1 text-xs rounded-full bg-yellow-300 hover:bg-yellow-400"
-                >
-                  Edit
-                </button>
-              )}
-            </div>
-            <div>
-              {item.status === "PENDING" && (
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  className="px-3 py-1 text-xs rounded-full bg-red-300 hover:bg-red-400"
-                >
-                  Delete
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         {data.length === 0 && (
           <div className="text-center py-6 text-gray-500 text-sm">

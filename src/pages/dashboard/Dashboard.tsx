@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import Header from '../../components/common/Header';
+
 import OverviewCard from '../../components/adminDashboard/OverviewCard';
 import LineChartComponent from '../../components/adminDashboard/LineChartComponent';
 import PieChartComponent from '../../components/adminDashboard/PieChartComponent';
 import BarChartComponent from '../../components/adminDashboard/BarChartComponent';
-import Sidebar from '../../components/common/Sidebar';
+
 
 
 const Dashboard = () => {
@@ -13,12 +13,12 @@ const Dashboard = () => {
   return (
     <div className="flex h-screen bg-gray-100" >
       {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {/* <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} /> */}
 
       {/* Main Content */}
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Header */}
-        <Header />
+        {/* <Header /> */}
 
         {/* Dashboard Content */}
         <main className="p-4 overflow-auto space-y-6">

@@ -1,14 +1,13 @@
 // Employeeattendence.tsx
 import React, { useEffect, useState } from 'react'
-import StaffSidebar from '../../components/common/StaffSidebar'
+
 import WorkRequestCard from '../../components/dashboard/WorkRequestCard'
 import TimeTrackerCard from '../../components/dashboard/Timetrackercard'
-import Header from '../../../components/common/Header'
+
 import AttendanceWeeklyTable from '../../components/Attendence and leave/AttendanceWeeklyTable'
 import { supabase } from '../../../supabaseClient'
 import { useUser } from '../../../context/UserContext'
-import { format, endOfMonth, addDays, isBefore, isAfter } from 'date-fns'
-// import RegularizeModal from '../../components/modals/RegularizeModal' // adjust path if you want to show the modal here
+import { format, endOfMonth, addDays, isAfter } from 'date-fns'
 
 interface AttendanceRecord {
   day: string;
@@ -20,20 +19,30 @@ interface AttendanceRecord {
   checkOutLocation: { lat: number; long: number } | null;
 }
 
+interface AttendanceRequest {
+  id: string;
+  request_type: 'REGULARIZATION' | 'LEAVE' | 'WFH';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  start_date: string | null;
+  end_date?: string | null;
+  created_at: string;
+}
+
 const EmployeeAttendancePage = () => {
   const { userData } = useUser();
   const userId = userData?.id;
 
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly')
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([])
   const [loading, setLoading] = useState(true)
+
+  const [requests, setRequests] = useState<AttendanceRequest[]>([])
+  const [reqLoading, setReqLoading] = useState(true)
 
   const today = new Date()
   const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth())
   const [selectedYear, setSelectedYear] = useState<number>(today.getFullYear())
 
-  // For opening your Regularize modal from the table:
   const [regularizeDate, setRegularizeDate] = useState<string | null>(null)
 
   const getColorBorder = (status: string) => {
@@ -70,8 +79,7 @@ const EmployeeAttendancePage = () => {
       const startDate = format(new Date(selectedYear, selectedMonth, 1), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(selectedYear, selectedMonth)), 'yyyy-MM-dd');
 
-      // 1) Base attendance summary for the month
-      const { data: summary, error: summaryErr } = await supabase
+      const { data: summary } = await supabase
         .from('employee_attendance_summary')
         .select('*')
         .eq('user_id', userId)
@@ -79,33 +87,22 @@ const EmployeeAttendancePage = () => {
         .lte('attendance_date', endDate)
         .order('attendance_date', { ascending: true });
 
-      if (summaryErr) {
-        console.error('Error fetching attendance summary:', summaryErr);
-      }
-
-      // 2) Approved LEAVE & WFH requests that overlap this month
-      const { data: requests, error: reqErr } = await supabase
+      const { data: approvedRequests } = await supabase
         .from('attendance_requests')
         .select('request_type, status, start_date, end_date')
         .eq('user_id', userId)
         .eq('status', 'APPROVED')
         .in('request_type', ['LEAVE', 'WFH'])
-        .lte('start_date', endDate)   // start on/before month end
-        .gte('end_date', startDate);  // end on/after month start
+        .lte('start_date', endDate)
+        .gte('end_date', startDate);
 
-      if (reqErr) {
-        console.error('Error fetching approved requests:', reqErr);
-      }
-
-      // Build quick lookup sets for LEAVE/WFH dates
       const leaveDates = new Set<string>();
       const wfhDates = new Set<string>();
 
-      if (requests?.length) {
-        for (const r of requests) {
+      if (approvedRequests?.length) {
+        for (const r of approvedRequests) {
           const s = new Date(r.start_date as string);
           const e = new Date(r.end_date as string);
-          // iterate inclusive
           for (let d = s; !isAfter(d, e); d = addDays(d, 1)) {
             const dayStr = format(d, 'yyyy-MM-dd');
             if (r.request_type === 'LEAVE') leaveDates.add(dayStr);
@@ -114,7 +111,6 @@ const EmployeeAttendancePage = () => {
         }
       }
 
-      // Build month view, overriding days with Leave/WFH and marking under-hours as Regularize
       const transformed: AttendanceRecord[] = [];
       const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
 
@@ -127,7 +123,6 @@ const EmployeeAttendancePage = () => {
 
         const dbEntry = summary?.find((entry) => entry.attendance_date === formattedDate);
 
-        // If there is an approved leave/WFH covering this date, force that status
         if (leaveDates.has(formattedDate)) {
           transformed.push({
             day: weekday,
@@ -154,18 +149,10 @@ const EmployeeAttendancePage = () => {
         }
 
         if (dbEntry) {
-          const checkInLat = dbEntry.check_in_latitudes?.[0] ?? null;
-          const checkInLong = dbEntry.check_in_longitudes?.[0] ?? null;
-          const checkOutLat = dbEntry.check_out_latitudes?.[0] ?? null;
-          const checkOutLong = dbEntry.check_out_longitudes?.[0] ?? null;
           const worked = Number(dbEntry.total_worked_hours ?? 0);
           const expected = Number(dbEntry.expected_hours ?? 0);
-
-          // Base status from attendance_status (first for the day if any)
           let status: string = dbEntry.attendance_statuses?.[0] || 'Absent';
-
-          // Under-hours (non-weekend, not future) => Regularize
-          const underHours = !isWeekend && !isFuture && expected > 0 && worked + 0.01 < expected; // small epsilon
+          const underHours = !isWeekend && !isFuture && expected > 0 && worked + 0.01 < expected;
           if (underHours) status = 'Regularize';
 
           transformed.push({
@@ -174,11 +161,10 @@ const EmployeeAttendancePage = () => {
             hoursWorked: worked.toFixed(2),
             expectedHours: expected.toFixed(2),
             status,
-            checkInLocation: checkInLat && checkInLong ? { lat: checkInLat, long: checkInLong } : null,
-            checkOutLocation: checkOutLat && checkOutLong ? { lat: checkOutLat, long: checkOutLong } : null,
+            checkInLocation: null,
+            checkOutLocation: null,
           });
         } else {
-          // No attendance row
           const status = isWeekend ? (isFuture ? 'Incomplete' : 'Approved Off') : (isFuture ? 'Incomplete' : 'Absent');
           transformed.push({
             day: weekday,
@@ -199,13 +185,30 @@ const EmployeeAttendancePage = () => {
     fetchAttendance();
   }, [userId, selectedMonth, selectedYear]);
 
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchRequests = async () => {
+      setReqLoading(true);
+      const { data } = await supabase
+        .from('attendance_requests')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      setRequests(data || []);
+      setReqLoading(false);
+    };
+
+    fetchRequests();
+  }, [userId]);
+
   if (loading) return <div>Loading attendance...</div>;
 
   return (
     <div className="flex bg-blue-50 min-h-screen">
-      <StaffSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex flex-col w-full">
-        <Header />
         <div className="p-6 space-y-6">
           {/* Top Cards */}
           <div className="flex gap-4">
@@ -250,7 +253,7 @@ const EmployeeAttendancePage = () => {
               {viewMode === 'weekly' ? (
                 <AttendanceWeeklyTable
                   data={attendanceData}
-                  onRegularize={(date) => setRegularizeDate(date)} // 👈 wire the click
+                  onRegularize={(date) => setRegularizeDate(date)}
                 />
               ) : (
                 <>
@@ -264,7 +267,7 @@ const EmployeeAttendancePage = () => {
                     {(() => {
                       const firstDay = new Date(selectedYear, selectedMonth, 1)
                       const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate()
-                      const firstDayIndex = (firstDay.getDay() + 6) % 7 // Monday = 0
+                      const firstDayIndex = (firstDay.getDay() + 6) % 7
 
                       const calendarDays = []
                       for (let i = 0; i < firstDayIndex; i++) calendarDays.push(<div key={`empty-${i}`} />)
@@ -274,18 +277,9 @@ const EmployeeAttendancePage = () => {
                         const formatted = format(date, 'yyyy-MM-dd')
                         const found = attendanceData.find(d => d.date === formatted)
                         const isFuture = date > today
-
-                        const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
-                        const isWeekend = weekday === 'Saturday' || weekday === 'Sunday';
-
-                        let status = 'Absent';
-                        if (found) {
-                          status = found.status;
-                        } else if (isWeekend) {
-                          status = isFuture ? 'Incomplete' : 'Approved Off';
-                        } else {
-                          status = isFuture ? 'Incomplete' : 'Absent';
-                        }
+                        const weekday = date.toLocaleDateString('en-US', { weekday: 'long' })
+                        const isWeekend = weekday === 'Saturday' || weekday === 'Sunday'
+                        let status = found ? found.status : isWeekend ? (isFuture ? 'Incomplete' : 'Approved Off') : (isFuture ? 'Incomplete' : 'Absent')
 
                         calendarDays.push(
                           <div key={formatted} className={`rounded-xl border ${getColorBorder(status)} shadow-sm hover:shadow-md flex flex-col justify-between h-24`}>
@@ -301,7 +295,6 @@ const EmployeeAttendancePage = () => {
                           </div>
                         )
                       }
-
                       return calendarDays
                     })()}
                   </div>
@@ -309,16 +302,87 @@ const EmployeeAttendancePage = () => {
               )}
             </div>
           </div>
+
+          {/* Requests Table Panel */}
+          <div className="bg-white/60 backdrop-blur-md rounded-2xl shadow p-6 mt-6">
+  <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Requests</h2>
+
+  <div className="overflow-x-auto">
+    <div className="max-h-80 overflow-y-auto rounded-xl custom-scrollbar">
+      <table className="min-w-full text-sm text-left border-separate border-spacing-y-2">
+        <thead className="bg-gray-100 text-gray-700 sticky top-0 rounded-xl">
+          <tr>
+            <th className="px-4 py-2 rounded-l-lg">Date</th>
+            <th className="px-4 py-2">Type</th>
+            <th className="px-4 py-2">Status</th>
+            <th className="px-4 py-2 rounded-r-lg">Requested On</th>
+          </tr>
+        </thead>
+        <tbody>
+          {reqLoading ? (
+            <tr>
+              <td colSpan={4} className="text-center py-4 text-gray-500">
+                Loading...
+              </td>
+            </tr>
+          ) : requests.length > 0 ? (
+            requests.map((req) => {
+              const formattedDate = req.start_date
+                ? new Date(req.start_date).toLocaleDateString("en-GB", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "-";
+              const createdDate = new Date(req.created_at).toLocaleDateString(
+                "en-GB",
+                {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                }
+              );
+              return (
+                <tr
+                  key={req.id}
+                  className="bg-white shadow-sm hover:shadow-md transition rounded-lg"
+                >
+                  <td className="px-4 py-3 rounded-l-lg">{formattedDate}</td>
+                  <td className="px-4 py-3">{req.request_type}</td>
+                  <td
+                    className={`px-4 py-3 font-semibold ${
+                      req.status === "APPROVED"
+                        ? "text-green-600"
+                        : req.status === "REJECTED"
+                        ? "text-red-600"
+                        : "text-yellow-600"
+                    }`}
+                  >
+                    {req.status}
+                  </td>
+                  <td className="px-4 py-3 rounded-r-lg">{createdDate}</td>
+                </tr>
+              );
+            })
+          ) : (
+            <tr>
+              <td
+                colSpan={4}
+                className="text-center py-4 text-gray-500 bg-white rounded-lg"
+              >
+                No requests found
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
         </div>
       </div>
-
-      {/* Regularize modal opening (optional; adjust import/path/props to your component) */}
-      {/* {regularizeDate && (
-        <RegularizeModal
-          onClose={() => setRegularizeDate(null)}
-          initialDate={regularizeDate}
-        />
-      )} */}
     </div>
   )
 }

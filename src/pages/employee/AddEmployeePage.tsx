@@ -1,7 +1,6 @@
 // src/pages/AddEmployeePage.tsx
 import React, { useState } from 'react';
-import Header from '../../components/common/Header';
-import Sidebar from '../../components/common/Sidebar';
+
 import { FaBars } from 'react-icons/fa';
 import AddEmployeeStepper from '../../components/adminEmployee/addemployee/AddEmployeeStepper';
 import AddEmployeeForm from '../../components/adminEmployee/addemployee/AddEmployeeForm';
@@ -10,7 +9,7 @@ import AssetAllocationForm from '../../components/adminEmployee/addemployee/Asse
 import PaymentInformationForm from '../../components/adminEmployee/addemployee/PaymentInformationForm';
 
 const AddEmployeePage: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
   const [currentStep, setCurrentStep] = useState(1);
 
   // Store IDs returned from Step 1
@@ -50,22 +49,22 @@ const AddEmployeePage: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {/* <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} /> */}
 
       <div className="flex flex-col flex-1 w-full overflow-hidden">
         {/* Mobile header */}
         <div className="md:hidden flex justify-between items-center bg-white p-4 border-b border-gray-200">
-          <button
+          
+            {/* <FaBar<button
             onClick={() => setSidebarOpen(true)}
             className="text-gray-700 text-xl"
-          >
-            <FaBars />
-          </button>
+          >s />
+          </button> */}
           <h2 className="text-lg font-semibold">Add Employee</h2>
         </div>
 
         {/* Top Header */}
-        <Header />
+        {/* <Header /> */}
 
         {/* Main Content */}
         <main className="p-6 overflow-auto space-y-6">

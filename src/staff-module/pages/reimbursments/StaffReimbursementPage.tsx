@@ -1,13 +1,12 @@
 // src/pages/staff/ReimbursementPage.tsx
 import React, { useState } from 'react';
-import Header from '../../../components/common/Header';
-import StaffSidebar from '../../components/common/StaffSidebar';
+
 import ReimbursementTable from '../../components/staff reimbursement/StaffReimbursementTable';
 import { supabase } from '../../../supabaseClient';
 import toast, { Toaster } from 'react-hot-toast';
 
 const ReimbursementPage: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+
 
   // Form state
   const [type, setType] = useState('');
@@ -82,10 +81,10 @@ const ReimbursementPage: React.FC = () => {
   }
 
   return (
-    <div className="flex bg-blue-50 min-h-screen">
-      <StaffSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex flex-col w-full">
-        <Header />
+    
+    <div className="flex flex-col w-full">
+        {/* <StaffSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} /> */}
+        {/* <Header /> */}
         <main className="p-6">
           <Toaster />
 
@@ -176,7 +175,7 @@ const ReimbursementPage: React.FC = () => {
           </div>
         </main>
       </div>
-    </div>
+    
   );
 };
 

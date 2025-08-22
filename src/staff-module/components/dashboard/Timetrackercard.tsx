@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import { supabase } from "../../../supabaseClient";
-
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
 import { useUser } from "../../../context/UserContext";
@@ -8,6 +7,8 @@ import { useUser } from "../../../context/UserContext";
 const TimeTracker = () => {
   const [todayRecord, setTodayRecord] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [checkInLoading, setCheckInLoading] = useState(false);
+  const [checkOutLoading, setCheckOutLoading] = useState(false);
   const { userData } = useUser();
 
   useEffect(() => {
@@ -51,9 +52,9 @@ const TimeTracker = () => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    return `${hrs.toString().padStart(2, '0')}:${mins
+    return `${hrs.toString().padStart(2, "0")}:${mins
       .toString()
-      .padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
   const getLocation = (): Promise<{ latitude: number; longitude: number }> => {
@@ -73,6 +74,7 @@ const TimeTracker = () => {
   };
 
   const handleCheckIn = async () => {
+    setCheckInLoading(true);
     try {
       const { latitude, longitude } = await getLocation();
       const userId = userData.id;
@@ -83,7 +85,8 @@ const TimeTracker = () => {
         .eq("users_id", userId)
         .single();
 
-      if (workingError || !workingData) throw new Error("Could not fetch working_hours entry.");
+      if (workingError || !workingData)
+        throw new Error("Could not fetch working_hours entry.");
 
       const workingHoursId = workingData.id;
       const companyId = workingData.company_id;
@@ -94,22 +97,26 @@ const TimeTracker = () => {
         .eq("status", "Checked In")
         .single();
 
-      if (statusError || !statusData) throw new Error("Could not fetch status_id.");
+      if (statusError || !statusData)
+        throw new Error("Could not fetch status_id.");
 
       const statusId = statusData.id;
 
-      const { data, error } = await supabase.from("attendance").insert([
-        {
-          company_id: companyId,
-          user_id: userId,
-          updated_by: userId,
-          check_in_time: new Date().toISOString(),
-          status_id: statusId,
-          working_id: workingHoursId,
-          check_in_latitude: latitude,
-          check_in_longitude: longitude,
-        },
-      ]).select("*");
+      const { data, error } = await supabase
+        .from("attendance")
+        .insert([
+          {
+            company_id: companyId,
+            user_id: userId,
+            updated_by: userId,
+            check_in_time: new Date().toISOString(),
+            status_id: statusId,
+            working_id: workingHoursId,
+            check_in_latitude: latitude,
+            check_in_longitude: longitude,
+          },
+        ])
+        .select("*");
 
       if (error) throw error;
 
@@ -118,10 +125,13 @@ const TimeTracker = () => {
     } catch (err: any) {
       console.error("Check-in error:", err.message);
       toast.error("Check-in failed!");
+    } finally {
+      setCheckInLoading(false);
     }
   };
 
   const handleCheckOut = async () => {
+    setCheckOutLoading(true);
     try {
       const { latitude, longitude } = await getLocation();
       const userId = userData.id;
@@ -159,10 +169,13 @@ const TimeTracker = () => {
     } catch (err: any) {
       console.error("Check-out error:", err.message);
       toast.error("Check-out failed!");
+    } finally {
+      setCheckOutLoading(false);
     }
   };
 
-  const isCheckedIn = todayRecord?.check_in_time && !todayRecord?.check_out_time;
+  const isCheckedIn =
+    todayRecord?.check_in_time && !todayRecord?.check_out_time;
   const isCheckedOut = todayRecord?.check_out_time;
 
   return (
@@ -194,18 +207,28 @@ const TimeTracker = () => {
             {!isCheckedIn && (
               <button
                 onClick={handleCheckIn}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                disabled={checkInLoading}
+                className={`px-4 py-2 rounded text-white ${
+                  checkInLoading
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-green-500 hover:bg-green-600"
+                }`}
               >
-                Check In
+                {checkInLoading ? "Checking In..." : "Check In"}
               </button>
             )}
 
             {isCheckedIn && (
               <button
                 onClick={handleCheckOut}
-                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                disabled={checkOutLoading}
+                className={`px-4 py-2 rounded text-white ${
+                  checkOutLoading
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-red-500 hover:bg-red-600"
+                }`}
               >
-                Check Out
+                {checkOutLoading ? "Checking Out..." : "Check Out"}
               </button>
             )}
           </div>
@@ -213,17 +236,26 @@ const TimeTracker = () => {
           <div className="mt-4 text-sm text-gray-700">
             {todayRecord?.check_in_time && (
               <p>
-                ✅ Checked in at: <span className="font-semibold">{formatDateTime(todayRecord.check_in_time)}</span>
+                ✅ Checked in at:{" "}
+                <span className="font-semibold">
+                  {formatDateTime(todayRecord.check_in_time)}
+                </span>
               </p>
             )}
             {todayRecord?.check_out_time && (
               <>
                 <p>
-                  ⛔ Checked out at: <span className="font-semibold">{formatDateTime(todayRecord.check_out_time)}</span>
+                  ⛔ Checked out at:{" "}
+                  <span className="font-semibold">
+                    {formatDateTime(todayRecord.check_out_time)}
+                  </span>
                 </p>
                 {todayRecord.duration_in_seconds != null && (
                   <p>
-                    ⏱ Duration: <span className="font-semibold">{formatDuration(todayRecord.duration_in_seconds)}</span>
+                    ⏱ Duration:{" "}
+                    <span className="font-semibold">
+                      {formatDuration(todayRecord.duration_in_seconds)}
+                    </span>
                   </p>
                 )}
               </>

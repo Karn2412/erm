@@ -4,8 +4,7 @@ import { startOfWeek, endOfWeek, endOfMonth, format } from 'date-fns';
 import { supabase } from '../../supabaseClient';
 import { FaMapMarkerAlt } from 'react-icons/fa';
 
-import Header from '../../components/common/Header';
-import Sidebar from '../../components/common/Sidebar';
+
 import EmployeeAttendanceHeader from './EmployeeAttendanceHeader';
 
 interface AttendanceRecord {
@@ -22,7 +21,7 @@ interface AttendanceRecord {
 
 const EmployeeAttendanceDetailPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+
 
   const today = new Date();
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
@@ -152,10 +151,10 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
   }, [userId, selectedMonth, selectedYear]);
 
   return (
-    <div className="flex">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <>
+      {/* <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1">
-        <Header />
+        <Header /> */}
         <div className="p-6 backdrop-blur-md bg-white/50 rounded-xl shadow-inner">
           <EmployeeAttendanceHeader
             viewMode={viewMode}
@@ -306,8 +305,8 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </>
+    
   );
 };
 

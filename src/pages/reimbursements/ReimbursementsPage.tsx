@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import Header from "../../components/common/Header";
-import Sidebar from "../../components/common/Sidebar";
+
 import ReimbursementsFilters from "../../components/reimbursements/ReimbursementsFilters";
 import ReimbursementsTable from "../../components/reimbursements/ReimbursementsTable";
 import { supabase } from "../../supabaseClient";
@@ -12,7 +11,7 @@ interface Employee {
 }
 
 const ReimbursementsPage: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
   const [employees, setEmployees] = useState<Employee[]>([]);
 
   useEffect(() => {
@@ -50,9 +49,9 @@ const ReimbursementsPage: React.FC = () => {
 
   return (
     <div className="flex">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {/* <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} /> */}
       <div className="flex-1">
-        <Header />
+        {/* <Header /> */}
 
         <div className="p-6 bg-indigo-50 h-screen">
           <div className="p-3 bg-white h-screen">

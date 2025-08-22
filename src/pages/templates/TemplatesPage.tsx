@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Header from '../../components/common/Header';
-import Sidebar from '../../components/common/Sidebar';
+
 import TemplateSidebar from '../../components/templates/TemplateSidebar';
 import TemplatePreviewCard from '../../components/templates/TemplatePreviewCard';
 import { supabase } from '../../supabaseClient';
@@ -8,7 +7,7 @@ import { supabase } from '../../supabaseClient';
 
 
 const TemplatesPage: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+ 
   const [activeTemplate, setActiveTemplate] = useState('Regular Payslips');
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -51,12 +50,12 @@ useEffect(() => {
   return (
     <div className="flex">
       {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {/* <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} /> */}
 
       {/* Main Content */}
       <div className="flex-1">
         {/* Header */}
-        <Header />
+        {/* <Header /> */}
 
         {/* Templates Section */}
         <div className="p-6">

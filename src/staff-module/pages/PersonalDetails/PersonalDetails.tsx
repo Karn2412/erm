@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
-import StaffSidebar from "../../components/common/StaffSidebar";
+
 import BasicDetailsForm from "../../components/personaldetails/BasicDetailsForm";
 import SectionStepper from "../../components/personaldetails/SectionTabs";
-import Header from "../../../components/common/Header";
+
 import BankingDetailsForm from "../../components/personaldetails/BankingDetailForm";
 import DocumentUploadForm from "../../components/personaldetails/DocumentUploadForm";
 import { supabase } from "../../../supabaseClient";
 
 const PersonalDetailsPage: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const [currentSection, setCurrentSection] = useState(1);
 
   const [basicDetails, setBasicDetails] = useState<any>({});
@@ -166,13 +166,14 @@ const handleSubmit = async () => {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <StaffSidebar
+    
+      
+      <div className="flex flex-col w-full">
+        {/* <StaffSidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-      />
-      <div className="flex flex-col w-full">
-        <Header />
+      /> */}
+        {/* <Header /> */}
         <main className="p-6 bg-blue-50">
           <div className="bg-white p-4">
             <SectionStepper
@@ -213,7 +214,7 @@ const handleSubmit = async () => {
           </div>
         </main>
       </div>
-    </div>
+    
   );
 };
 

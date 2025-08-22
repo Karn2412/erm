@@ -65,7 +65,7 @@ const WorkRequestCard: React.FC = () => {
   const rejectedCount = requests.filter(r => r.status === "REJECTED").length;
 
   return (
-    <div className="bg-gray-100 p-6 rounded-2xl shadow-lg">
+    <div className="bg-white p-6 rounded-2xl shadow-lg">
       <h2 className="text-lg font-semibold text-gray-800 mb-6">
         Work Related Requests
       </h2>
@@ -99,7 +99,7 @@ const WorkRequestCard: React.FC = () => {
         </div>
 
         {/* Right column: summary */}
-        <div className="ml-8 flex-1 space-y-3 text-sm text-gray-700">
+        <div className="ml-8 flex-1 space-y-3 text-sm bg-gray-100 p-6 rounded-2xl text-gray-700">
           {loading ? (
             <p>Loading...</p>
           ) : (
@@ -117,30 +117,10 @@ const WorkRequestCard: React.FC = () => {
                 <p className="text-red-700">{rejectedCount} rejected</p>
               </div>
 
-              {/* Latest 5 with weekday derived from start_date */}
-              <ul className="mt-3 space-y-1 text-xs">
-                {requests.slice(0, 5).map(req => {
-                  const weekday = req.start_date
-                    ? new Date(req.start_date).toLocaleDateString("en-US", { weekday: "long" })
-                    : "";
-                  return (
-                    <li key={req.id} className="flex justify-between">
-                      <span>{weekday} - {req.request_type}</span>
-                      <span
-                        className={
-                          req.status === "APPROVED"
-                            ? "text-green-600"
-                            : req.status === "REJECTED"
-                            ? "text-red-600"
-                            : "text-yellow-600"
-                        }
-                      >
-                        {req.status}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+              
+
+
+
             </>
           )}
         </div>

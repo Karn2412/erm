@@ -1,14 +1,13 @@
 // AttendanceAndLeavePage.tsx
 import React, { useEffect, useState } from 'react';
-import Header from '../../components/common/Header';
-import Sidebar from '../../components/common/Sidebar';
+
 import AttendanceFilterAndLegend from '../../components/adminAttendanceLeave/AttendanceFilterAndLegend';
 import AttendanceTable from '../../components/adminAttendanceLeave/AttendanceTable';
 import { supabase } from '../../supabaseClient';
-import { format } from 'date-fns';
+
 
 const AttendanceAndLeavePage: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+ 
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -197,10 +196,10 @@ const AttendanceAndLeavePage: React.FC = () => {
 
   return (
     <div className="flex">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {/* <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} /> */}
 
       <div className="flex-1">
-        <Header />
+        {/* <Header /> */}
 
         <div className="p-6">
           <AttendanceFilterAndLegend selectedDate={selectedDate} onDateChange={setSelectedDate} />
