@@ -163,46 +163,49 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ authId, formData, s
             Address Line 1
           </label>
           <input
-            type="text"
-            name="address_1"
-            placeholder="Address line 1"
-            className={pillInput}
-            value={formData.address_1 || ''}
-            onChange={handleChange}
-          />
+  type="text"
+  name="address_1"
+  placeholder="Address line 1"
+  className={pillInput}
+  value={formData.address_1 || ''}
+  onChange={handleChange}
+/>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Address Line 2
           </label>
           <input
-            type="text"
-            name="address_2"
-            placeholder="Address line 2"
-            className={pillInput}
-            value={formData.address_2 || ''}
-            onChange={handleChange}
-          />
+  type="text"
+  name="address_2"
+  placeholder="Address line 2"
+  className={pillInput}
+  value={formData.address_2 || ''}
+  onChange={handleChange}
+/>
         </div>
 
         {/* State, City (text), Pincode */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
-            <select
-              name="state"
-              className={pillSelect}
-              value={formData.state || ''}
-              onChange={handleChange}
-            >
-              <option value="">Select State</option>
-              {states.map((state) => (
-                <option key={state.id} value={state.id}>
-                  {state.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* State */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+  <select
+    name="state"
+    className={pillSelect}
+    value={formData.state || ''}   // use `state` not `state_id`
+    onChange={handleChange}
+  >
+    <option value="">Select State</option>
+    {states.map((state) => (
+      <option key={state.id} value={state.name}>
+        {state.name}
+      </option>
+    ))}
+  </select>
+</div>
+
+
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
