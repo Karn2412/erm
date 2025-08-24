@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "../../../supabaseClient";
 
 interface AddEmployeeFormProps {
@@ -16,11 +16,43 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeCreated }) 
     gender: "Male",
     dateOfJoining: "",
     designation: "",
-    department: "HR",
+    department: "",
     role_name: "staff",
     work_start: "",
     work_end: "",
   });
+
+  const [departments, setDepartments] = useState<{ id: string; department_name: string }[]>([]);
+
+useEffect(() => {
+  const fetchDepartments = async () => {
+    // get current logged in user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // find company_id from user_roles
+    const { data: roleRecord } = await supabase
+      .from("user_roles")
+      .select("company_id")
+      .eq("id", user.id)
+      .single();
+
+    if (!roleRecord) return;
+
+    // fetch departments for that company
+    const { data, error } = await supabase
+      .from("departments")
+      .select("id, department_name")
+      .eq("company_id", roleRecord.company_id);
+
+    if (!error && data) {
+      setDepartments(data);
+    }
+  };
+
+  fetchDepartments();
+}, []);
+
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -85,8 +117,9 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeCreated }) 
         number: formData.number,
         gender: formData.gender,
         date_of_joining: formattedDate,
+        
         designation: formData.designation,
-        department: formData.department,
+        department_id: formData.department,
         company_id: companyId,
         role_name: formData.role_name,
       };
@@ -151,7 +184,7 @@ const timeToSeconds = (timeStr: string) => {
           gender: "Male",
           dateOfJoining: "",
           designation: "",
-          department: "HR",
+          department: "",
           role_name: "staff",
           work_start: "",
           work_end: "",
@@ -291,21 +324,24 @@ const timeToSeconds = (timeStr: string) => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Department <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="department"
-              value={formData.department}
-              onChange={handleChange}
-              className="w-3/4 px-3 py-2 border border-blue-400 rounded-full bg-white"
-            >
-              <option value="HR">HR</option>
-              <option value="Finance">Finance</option>
-              <option value="IT">IT</option>
-              <option value="Customer Support">Customer Support</option>
-            </select>
-          </div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Department <span className="text-red-500">*</span>
+  </label>
+  <select
+    name="department"
+    value={formData.department}
+    onChange={handleChange}
+    className="w-3/4 px-3 py-2 border border-blue-400 rounded-full bg-white"
+  >
+    <option value="">Select Department</option>
+    {departments.map((dept) => (
+      <option key={dept.id} value={dept.id}>
+        {dept.department_name}
+      </option>
+    ))}
+  </select>
+</div>
+
         </div>
 
         {/* Role Selection */}

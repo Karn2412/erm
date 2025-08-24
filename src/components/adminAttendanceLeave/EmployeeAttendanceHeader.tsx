@@ -1,5 +1,6 @@
-import React, { useState, type Dispatch, type SetStateAction } from 'react';
+import React, { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import RequestsModal from './attendencemodal/RequestsModal';
+import { supabase } from '../../supabaseClient';
 
 interface EmployeeAttendanceHeaderProps {
   viewMode: 'weekly' | 'monthly';
@@ -8,6 +9,7 @@ interface EmployeeAttendanceHeaderProps {
   department: string;
   designation: string;
   showRequestsButton?: boolean;
+  userId: string; // New prop for user ID
 }
 
 const EmployeeAttendanceHeader: React.FC<EmployeeAttendanceHeaderProps> = ({
@@ -17,8 +19,28 @@ const EmployeeAttendanceHeader: React.FC<EmployeeAttendanceHeaderProps> = ({
   department,
   designation,
   showRequestsButton = false,
+  userId, 
 }) => {
   const [showModal, setShowModal] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+useEffect(() => {
+  if (!userId) return;  // 👈 prevents crash
+
+  const fetchPendingCount = async () => {
+    const { count, error } = await supabase
+      .from("attendance_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "PENDING");
+
+    if (!error) setPendingCount(count || 0);
+  };
+
+  fetchPendingCount();
+}, [userId]);
+
+
 
   return (
     <div>
@@ -67,8 +89,8 @@ const EmployeeAttendanceHeader: React.FC<EmployeeAttendanceHeaderProps> = ({
               >
                 Requests
                 <span className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-white text-[10px]">
-                  2
-                </span>
+  {pendingCount}
+</span>
               </button>
             )}
           </div>
@@ -97,7 +119,8 @@ const EmployeeAttendanceHeader: React.FC<EmployeeAttendanceHeaderProps> = ({
         </div>
       </div>
 
-      {showModal && <RequestsModal onClose={() => setShowModal(false)} />}
+      {showModal && <RequestsModal onClose={() => setShowModal(false)} userId={userId} />}
+
     </div>
   );
 };

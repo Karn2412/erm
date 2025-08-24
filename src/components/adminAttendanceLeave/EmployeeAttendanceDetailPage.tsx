@@ -65,6 +65,21 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
     }
   };
 
+  const [employee, setEmployee] = useState<{ name: string; department: string; designation: string } | null>(null);
+
+useEffect(() => {
+  if (!userId) return;
+  const fetchEmployee = async () => {
+    const { data } = await supabase
+      .from("users")
+      .select("name, department, designation")
+      .eq("id", userId)
+      .single();
+    setEmployee(data);
+  };
+  fetchEmployee();
+}, [userId]);
+
   useEffect(() => {
     if (!userId) return;
 
@@ -157,13 +172,14 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
         <Header /> */}
         <div className="p-6 backdrop-blur-md bg-white/50 rounded-xl shadow-inner">
           <EmployeeAttendanceHeader
-            viewMode={viewMode}
-            setViewMode={setViewMode}
-            employeeName="Zain Workman"
-            department="Ostrobyte Overseas"
-            designation="UI UX Designer"
-            showRequestsButton={true}
-          />
+  viewMode={viewMode}
+  setViewMode={setViewMode}
+  employeeName={employee?.name || ""}
+  department={employee?.department || ""}
+  designation={employee?.designation || ""}
+  showRequestsButton={true}
+  userId={userId}
+/>
 
           <div
             className="overflow-y-scroll overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm p-2"

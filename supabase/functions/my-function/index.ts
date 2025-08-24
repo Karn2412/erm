@@ -59,7 +59,7 @@ serve(async (req) => {
 
     // ✅ Parse Request Body
     const body = await req.json();
-    const { email, password, name, number, role_name } = body;
+    const { email, password, name, number, role_name, gender, department_id } = body;
 
     if (!email || !password || !name || !number) {
       return withCors(new Response(JSON.stringify({ error: "Missing fields" }), { status: 400 }));
@@ -80,7 +80,8 @@ serve(async (req) => {
 
     // ✅ Insert into users table with company_id
     const { error: insertError } = await supabase.from("users").insert([
-      { id: newUserId, name, number, company_id: adminCompanyId },
+      { id: newUserId, name, number, company_id: adminCompanyId, gender,               // ✅ new field
+        department_id: department_id, },
     ]);
 
     if (insertError) {
