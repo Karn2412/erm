@@ -13,46 +13,55 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeCreated }) 
     email: "",
     password: "",
     number: "",
-    gender: "Male",
+    gender_id: "", // ✅ using gender_id instead of string
     dateOfJoining: "",
     designation: "",
-    department: "",
+    department_id: "",
     role_name: "staff",
     work_start: "",
     work_end: "",
   });
 
   const [departments, setDepartments] = useState<{ id: string; department_name: string }[]>([]);
+  const [genders, setGenders] = useState<{ id: string; type: string }[]>([]);
 
-useEffect(() => {
-  const fetchDepartments = async () => {
-    // get current logged in user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  // ✅ Fetch departments for current admin’s company
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    // find company_id from user_roles
-    const { data: roleRecord } = await supabase
-      .from("user_roles")
-      .select("company_id")
-      .eq("id", user.id)
-      .single();
+      const { data: roleRecord } = await supabase
+        .from("user_roles")
+        .select("company_id")
+        .eq("id", user.id)
+        .single();
 
-    if (!roleRecord) return;
+      if (!roleRecord) return;
 
-    // fetch departments for that company
-    const { data, error } = await supabase
-      .from("departments")
-      .select("id, department_name")
-      .eq("company_id", roleRecord.company_id);
+      const { data, error } = await supabase
+        .from("departments")
+        .select("id, department_name")
+        .eq("company_id", roleRecord.company_id);
 
-    if (!error && data) {
-      setDepartments(data);
-    }
-  };
+      if (!error && data) {
+        setDepartments(data);
+      }
+    };
 
-  fetchDepartments();
-}, []);
+    fetchDepartments();
+  }, []);
 
+  // ✅ Fetch genders list
+  useEffect(() => {
+    const fetchGenders = async () => {
+      const { data, error } = await supabase.from("genders").select("id, type");
+      if (!error && data) {
+        setGenders(data);
+      }
+    };
+    fetchGenders();
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -78,6 +87,21 @@ useEffect(() => {
         alert("Session not found. Please login again.");
         return;
       }
+      if (!formData.department_id) {
+        alert("Please select a department.");
+        return;
+      }
+      if (!formData.gender_id) {
+        alert("Please select a gender.");
+        return;
+      }
+
+      // inside handleSubmit
+      if (!formData.department_id) {
+        alert("Please select a department.");
+        return;
+      }
+
 
       const accessToken = session.access_token;
 
@@ -115,21 +139,22 @@ useEffect(() => {
         password: formData.password,
         name: fullName,
         number: formData.number,
-        gender: formData.gender,
+        gender_id: formData.gender_id, // ✅ send gender_id
         date_of_joining: formattedDate,
-        
         designation: formData.designation,
-        department_id: formData.department,
+        department_id: formData.department_id,
         company_id: companyId,
         role_name: formData.role_name,
       };
-      // Helper function to convert HH:mm to seconds
-const timeToSeconds = (timeStr: string) => {
-  if (!timeStr) return 0;
-  const [hours, minutes] = timeStr.split(":").map(Number);
-  return hours * 3600 + minutes * 60;
-};
 
+      // Helper function to convert HH:mm to seconds
+      const timeToSeconds = (timeStr: string) => {
+        if (!timeStr) return 0;
+        const [hours, minutes] = timeStr.split(":").map(Number);
+        return hours * 3600 + minutes * 60;
+      };
+
+      console.log("requestBody>>>>>>>>>>>>>",requestBody);
 
       // Call Edge Function
       const response = await fetch(
@@ -158,14 +183,16 @@ const timeToSeconds = (timeStr: string) => {
             {
               company_id: companyId,
               users_id: newUserId,
-                   work_start: timeToSeconds(formData.work_start), // ✅ converted to seconds
-      work_end: timeToSeconds(formData.work_end),     // ✅ converted to seconds
+              work_start: timeToSeconds(formData.work_start),
+              work_end: timeToSeconds(formData.work_end),
               created_at: new Date().toISOString(),
             },
           ]);
 
         if (workHoursError) {
-          alert(`⚠️ Employee created, but failed to set working hours: ${workHoursError.message}`);
+          alert(
+            `⚠️ Employee created, but failed to set working hours: ${workHoursError.message}`
+          );
         } else {
           alert("✅ Employee and working hours added successfully!");
         }
@@ -181,10 +208,10 @@ const timeToSeconds = (timeStr: string) => {
           email: "",
           password: "",
           number: "",
-          gender: "Male",
+          gender_id: "", // ✅ reset to empty
           dateOfJoining: "",
           designation: "",
-          department: "",
+          department_id: "",
           role_name: "staff",
           work_start: "",
           work_end: "",
@@ -194,6 +221,7 @@ const timeToSeconds = (timeStr: string) => {
       alert("Unexpected error: " + err.message);
     }
   };
+
   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 rounded-md shadow-sm">
       <div className="space-y-6 pr-6">
@@ -283,14 +311,17 @@ const timeToSeconds = (timeStr: string) => {
               Gender <span className="text-red-500">*</span>
             </label>
             <select
-              name="gender"
-              value={formData.gender}
+              name="gender_id"
+              value={formData.gender_id}
               onChange={handleChange}
               className="w-3/4 px-3 py-2 border border-blue-400 rounded-full bg-white"
             >
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
+              <option value="">Select Gender</option>
+              {genders.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.type}
+                </option>
+              ))}
             </select>
           </div>
           <div>
@@ -324,24 +355,25 @@ const timeToSeconds = (timeStr: string) => {
             />
           </div>
           <div>
-  <label className="block text-sm font-medium text-gray-700 mb-2">
-    Department <span className="text-red-500">*</span>
-  </label>
-  <select
-    name="department"
-    value={formData.department}
-    onChange={handleChange}
-    className="w-3/4 px-3 py-2 border border-blue-400 rounded-full bg-white"
-  >
-    <option value="">Select Department</option>
-    {departments.map((dept) => (
-      <option key={dept.id} value={dept.id}>
-        {dept.department_name}
-      </option>
-    ))}
-  </select>
-</div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Department <span className="text-red-500">*</span>
+            </label>
+            <select
+              name="department_id"
+              value={formData.department_id}
+              onChange={handleChange}
+              required
+              className="w-3/4 px-3 py-2 border border-blue-400 rounded-full bg-white"
+            >
+              <option value="">Select Department</option>
+              {departments.map((dept) => (
+                <option key={dept.id} value={dept.id}>
+                  {dept.department_name}
+                </option>
+              ))}
+            </select>
 
+          </div>
         </div>
 
         {/* Role Selection */}

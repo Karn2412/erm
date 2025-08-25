@@ -7,10 +7,11 @@ import { supabase } from "../../../supabaseClient";
 
 interface Props {
   userId: string;
+  companyId: string;
   onComplete: () => void; // ✅ trigger stepper update
 }
 
-const AssetAllocationForm: React.FC<Props> = ({ userId, onComplete }) => {
+const AssetAllocationForm: React.FC<Props> = ({ userId, companyId, onComplete }) => {
   const [selectedAssets, setSelectedAssets] = useState<string[]>([]);
   const [uniqueAssets, setUniqueAssets] = useState("");
 
@@ -25,6 +26,7 @@ const AssetAllocationForm: React.FC<Props> = ({ userId, onComplete }) => {
       {
         user_id: userId,
         assets: selectedAssets,
+        company_id: companyId,
         unique_assets: uniqueAssets,
       },
     ]);

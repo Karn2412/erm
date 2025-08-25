@@ -194,7 +194,7 @@ const EmployeeModal = ({
 
   if (loading)
     return (
-      <div className="fixed inset-0 flex items-center justify-center text-white bg-black bg-opacity-50">
+      <div className="fixed inset-0 flex items-center justify-center "  style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
         Loading...
       </div>
     );

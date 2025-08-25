@@ -22,6 +22,7 @@ const TimeTracker = () => {
         .gte("check_in_time", `${today}T00:00:00`)
         .lt("check_in_time", `${today}T23:59:59`)
         .order("check_in_time", { ascending: false });
+      console.log("Attendance Data:", data);
 
       if (error && error.code !== "PGRST116") {
         console.error("Attendance fetch error:", error.message);
@@ -78,18 +79,24 @@ const TimeTracker = () => {
     try {
       const { latitude, longitude } = await getLocation();
       const userId = userData.id;
+      console.log("Check-in Location:", { latitude, longitude });
 
       const { data: workingData, error: workingError } = await supabase
-        .from("working_hours")
-        .select("id, company_id")
-        .eq("users_id", userId)
-        .single();
+  .from("working_hours")
+  .select("id, company_id")
+  .eq("user_id", userId)
+  .limit(1);
 
-      if (workingError || !workingData)
-        throw new Error("Could not fetch working_hours entry.");
+if (workingError || !workingData || workingData.length === 0) {
+  console.error("Working hours fetch failed", workingError);
+  toast.error("No working hours configured for this user!");
+  setCheckInLoading(false);
+  return;
+}
 
-      const workingHoursId = workingData.id;
-      const companyId = workingData.company_id;
+const workingHoursId = workingData[0].id;
+const companyId = workingData[0].company_id;
+
 
       const { data: statusData, error: statusError } = await supabase
         .from("attendance_status")

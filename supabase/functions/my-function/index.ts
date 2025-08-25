@@ -32,7 +32,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     const jwt = authHeader?.replace("Bearer ", "");
     if (!jwt) {
-      return withCors(new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 }));
+      return withCors(new Response(JSON.stringify({ error: "Unauthorized: Missing Bearer token" }), { status: 401 }));
     }
 
     const { data: authUser, error: authError } = await supabase.auth.getUser(jwt);
@@ -47,7 +47,11 @@ serve(async (req) => {
       .eq("id", authUser.user.id)
       .single();
 
-    if (adminError || !admin || admin.roles.role !== "admin") {
+    if (adminError || !admin) {
+      return withCors(new Response(JSON.stringify({ error: "Could not fetch admin role", details: adminError?.message }), { status: 403 }));
+    }
+
+    if (admin.roles.role !== "admin") {
       return withCors(new Response(JSON.stringify({ error: "Not an Admin" }), { status: 403 }));
     }
 
@@ -59,10 +63,19 @@ serve(async (req) => {
 
     // ✅ Parse Request Body
     const body = await req.json();
-    const { email, password, name, number, role_name, gender, department_id } = body;
+    const { email, password, name, number, role_name, gender_id, department_id } = body;
 
+    // Validate fields
     if (!email || !password || !name || !number) {
-      return withCors(new Response(JSON.stringify({ error: "Missing fields" }), { status: 400 }));
+      return withCors(new Response(JSON.stringify({ error: "Missing required fields: email, password, name, number" }), { status: 400 }));
+    }
+
+    if (!gender_id) {
+      return withCors(new Response(JSON.stringify({ error: "gender_id is required" }), { status: 400 }));
+    }
+
+    if (!department_id) {
+      return withCors(new Response(JSON.stringify({ error: "department_id is required" }), { status: 400 }));
     }
 
     // ✅ Create Auth User
@@ -73,22 +86,30 @@ serve(async (req) => {
     });
 
     if (userError || !userData?.user?.id) {
-      return withCors(new Response(JSON.stringify({ error: userError?.message }), { status: 500 }));
+      console.error("Auth Create User Error:", userError);
+      return withCors(new Response(JSON.stringify({ error: "Auth user creation failed", details: userError?.message }), { status: 500 }));
     }
 
     const newUserId = userData.user.id;
 
-    // ✅ Insert into users table with company_id
+    // ✅ Insert into users table
     const { error: insertError } = await supabase.from("users").insert([
-      { id: newUserId, name, number, company_id: adminCompanyId, gender,               // ✅ new field
-        department_id: department_id, },
+      {
+        id: newUserId,
+        name,
+        number,
+        company_id: adminCompanyId,
+        gender_id,
+        department_id,
+      },
     ]);
 
     if (insertError) {
-      return withCors(new Response(JSON.stringify({ error: insertError.message }), { status: 500 }));
+      console.error("Insert Error:", insertError);
+      return withCors(new Response(JSON.stringify({ error: "User insert failed", details: insertError.message }), { status: 500 }));
     }
 
-    // ✅ Fetch the correct role_id (admin or staff) from roles table
+    // ✅ Fetch the correct role_id (admin or staff)
     const selectedRole = role_name === "admin" ? "admin" : "staff";
     const { data: roleData, error: roleError } = await supabase
       .from("roles")
@@ -97,7 +118,7 @@ serve(async (req) => {
       .single();
 
     if (roleError || !roleData) {
-      return withCors(new Response(JSON.stringify({ error: "Role not found in roles table" }), { status: 400 }));
+      return withCors(new Response(JSON.stringify({ error: "Role not found in roles table", details: roleError?.message }), { status: 400 }));
     }
 
     // ✅ Assign role to the new user
@@ -110,7 +131,8 @@ serve(async (req) => {
     ]);
 
     if (userRoleError) {
-      return withCors(new Response(JSON.stringify({ error: userRoleError.message }), { status: 500 }));
+      console.error("User Role Insert Error:", userRoleError);
+      return withCors(new Response(JSON.stringify({ error: "Failed to assign user role", details: userRoleError.message }), { status: 500 }));
     }
 
     return withCors(
@@ -124,6 +146,7 @@ serve(async (req) => {
       )
     );
   } catch (err) {
-    return withCors(new Response(JSON.stringify({ error: String(err) }), { status: 500 }));
+    console.error("Unexpected Error:", err);
+    return withCors(new Response(JSON.stringify({ error: "Unexpected server error", details: String(err) }), { status: 500 }));
   }
 });

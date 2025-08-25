@@ -10,7 +10,7 @@ import {
 import { supabase } from "../../supabaseClient";
 import { useUser } from "../../context/UserContext";
 
-const COLORS = ["#b4fff3", "#a394f7"];
+const COLORS = ["#b4fff3", "#a394f7", "#ffd27f"];
 
 const PieChartComponent: React.FC = () => {
   const [data, setData] = useState<{ name: string; value: number }[]>([]);
@@ -20,27 +20,26 @@ const PieChartComponent: React.FC = () => {
     const fetchGenderData = async () => {
       if (!userData?.company_id) return;
 
-const { data, error } = await supabase
-  .from("users_gender_count")
-  .select("gender, value")
-  .eq("company_id", userData.company_id);
+      const { data, error } = await supabase
+        .from("users_gender_count")
+        .select("gender, value")
+        .eq("company_id", userData.company_id);
 
-if (error) {
-  console.error("❌ Error fetching gender stats:", error);
-  return;
-}
+      if (error) {
+        console.error("❌ Error fetching gender stats:", error);
+        return;
+      }
 
-const formatted =
-  data?.map((row: any) => {
-    const g = (row.gender || "").toLowerCase();
-    return {
-      name: g === "male" ? "Men" : g === "female" ? "Women" : "Other",
-      value: row.value,
-    };
-  }) || [];
+      const formatted =
+        data?.map((row: any) => {
+          const g = (row.gender || "").toLowerCase();
+          return {
+            name: g === "male" ? "Men" : g === "female" ? "Women" : "Other",
+            value: row.value,
+          };
+        }) || [];
 
-setData(formatted);
-
+      setData(formatted);
     };
 
     fetchGenderData();
@@ -78,11 +77,19 @@ setData(formatted);
           {label.value}
         </tspan>
         <tspan x={x} dy={16} style={{ fontSize: "12px", fontWeight: "normal" }}>
-          {(percent * 100).toFixed(2)}%
+          {(percent * 100).toFixed(1)}%
         </tspan>
       </text>
     );
   };
+
+  // 👉 Compute totals & percentages dynamically
+  const total = data.reduce((sum, d) => sum + d.value, 0);
+  const female = data.find((d) => d.name === "Women")?.value || 0;
+  const male = data.find((d) => d.name === "Men")?.value || 0;
+
+  const femalePercent = total > 0 ? ((female / total) * 100).toFixed(1) : "0";
+  const malePercent = total > 0 ? ((male / total) * 100).toFixed(1) : "0";
 
   return (
     <div className="flex flex-col md:flex-row justify-between bg-white rounded-xl p-4 shadow-sm">
@@ -104,7 +111,10 @@ setData(formatted);
               endAngle={450}
             >
               {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Cell
+                  key={`cell-${index}`}
+                  fill={COLORS[index % COLORS.length]}
+                />
               ))}
             </Pie>
             <Tooltip />
@@ -112,16 +122,24 @@ setData(formatted);
         </ResponsiveContainer>
       </div>
 
-      {/* Stats Box */}
+      {/* Stats Box (dynamic) */}
       <div className="w-full md:w-[280px] mt-6 md:mt-0 md:ml-4 text-sm">
         <p>
-          <span className="font-semibold">Female workforce</span> has grown by{" "}
-          <span className="font-bold">18%</span> in the past 6 months.
+          <span className="font-semibold">Female workforce</span> makes up{" "}
+          <span className="font-bold">{femalePercent}%</span> of employees.
         </p>
         <p className="mt-2">
-          Male employee count remained steady, with a marginal growth of{" "}
-          <span className="font-bold">2.5%</span> over the last quarter.
+          <span className="font-semibold">Male workforce</span> represents{" "}
+          <span className="font-bold">{malePercent}%</span>.
         </p>
+        {data.some((d) => d.name === "Other") && (
+          <p className="mt-2">
+            <span className="font-semibold">Other genders</span> account for{" "}
+            <span className="font-bold">
+              {((100 - Number(femalePercent) - Number(malePercent)) || 0).toFixed(1)}%
+            </span>.
+          </p>
+        )}
       </div>
     </div>
   );

@@ -3,15 +3,16 @@ import { supabase } from "../../../supabaseClient";
 
 interface Props {
   userId: string;
+  companyId: string;
   onComplete: () => void; // trigger stepper update
 }
 
-const PaymentInformationForm: React.FC<Props> = ({ userId, onComplete }) => {
+const PaymentInformationForm: React.FC<Props> = ({ userId, companyId, onComplete }) => {
   const [selectedMethod, setSelectedMethod] = useState("Bank Transfer");
 
   const handleSubmit = async () => {
     const { error } = await supabase.from("payment_preferences").insert([
-      { user_id: userId, method: selectedMethod },
+      { user_id: userId, method: selectedMethod, company_id: companyId },
     ]);
 
     if (error) {

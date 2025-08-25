@@ -5,9 +5,10 @@ import { supabase } from "../../../supabaseClient";
 interface SalaryDetailsFormProps {
   userId: string;      // Pass from parent (employee's user_id)
   companyId: string;   // Pass from parent (current company_id)
+   onComplete: () => void
 }
 
-const SalaryDetailsForm: React.FC<SalaryDetailsFormProps> = ({ userId, companyId }) => {
+const SalaryDetailsForm: React.FC<SalaryDetailsFormProps> = ({ userId, companyId , onComplete }) => {
   const [dateOfJoining, setDateOfJoining] = useState("");
   const [monthlyCTC, setMonthlyCTC] = useState<number | "">("");
   const [pfCovered, setPfCovered] = useState(true);
@@ -60,6 +61,7 @@ const SalaryDetailsForm: React.FC<SalaryDetailsFormProps> = ({ userId, companyId
       alert("Error saving salary details");
     } else {
       alert("Salary details saved successfully!");
+      onComplete(); 
     }
   };
 
