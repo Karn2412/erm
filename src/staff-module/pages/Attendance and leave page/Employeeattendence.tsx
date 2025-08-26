@@ -211,10 +211,19 @@ const EmployeeAttendancePage = () => {
       <div className="flex flex-col w-full">
         <div className="p-6 space-y-6">
           {/* Top Cards */}
-          <div className="flex gap-4">
-            <div className="w-1/2"><TimeTrackerCard /></div>
-            <div className="w-1/2"><WorkRequestCard /></div>
-          </div>
+          <div className="flex gap-4 items-stretch">
+  <div className="w-1/2">
+    <div className="h-full bg-white shadow-md rounded-lg">
+      <TimeTrackerCard />
+    </div>
+  </div>
+  <div className="w-1/2">
+    <div className="h-full">
+      <WorkRequestCard />
+    </div>
+  </div>
+</div>
+
 
           {/* Attendance Panel */}
           <div className="bg-white/60 backdrop-blur-md rounded-2xl shadow p-6">

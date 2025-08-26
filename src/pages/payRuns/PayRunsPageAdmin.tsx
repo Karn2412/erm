@@ -1,24 +1,35 @@
-import React from 'react';
-
-import PayRunsFilters from '../../components/payruns/PayRunsFilters';
-import PayRunsTable from '../../components/payruns/PayRunsTable';
-
+import React, { useState } from "react";
+import PayRunsFilters from "../../components/payruns/PayRunsFilters";
+import PayRunsTable from "../../components/payruns/PayRunsTable";
 
 const PayRunsPageAdmin: React.FC = () => {
-  
+  const [selectedMonth, setSelectedMonth] = useState<string>(
+    new Date().toISOString().slice(0, 7) // YYYY-MM
+  );
+  const [payRange, setPayRange] = useState<string>("All");
+  const [search, setSearch] = useState<string>("");
 
   return (
     <div className="flex">
-      {/* <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} /> */}
       <div className="flex-1">
-        {/* <Header /> */}
-
         <div className="p-9 bg-indigo-50 ">
-          <div className='bg-white p-5'>
+          <div className="bg-white p-5">
             <h2 className="text-lg font-semibold mb-4">Upcoming Pay Runs</h2>
 
-          <PayRunsFilters />
-          <PayRunsTable />
+            {/* pass props */}
+            <PayRunsFilters
+              selectedMonth={selectedMonth}
+              setSelectedMonth={setSelectedMonth}
+              payRange={payRange}
+              setPayRange={setPayRange}
+              search={search}
+              setSearch={setSearch}
+            />
+            <PayRunsTable
+              selectedMonth={selectedMonth}
+              payRange={payRange}
+              search={search}
+            />
           </div>
         </div>
       </div>

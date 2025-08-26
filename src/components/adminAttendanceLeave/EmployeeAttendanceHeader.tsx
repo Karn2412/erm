@@ -5,42 +5,66 @@ import { supabase } from '../../supabaseClient';
 interface EmployeeAttendanceHeaderProps {
   viewMode: 'weekly' | 'monthly';
   setViewMode: Dispatch<SetStateAction<'weekly' | 'monthly'>>;
-  employeeName: string;
-  department: string;
-  designation: string;
   showRequestsButton?: boolean;
-  userId: string; // New prop for user ID
+  userId: string; // User ID to fetch name & department
 }
 
 const EmployeeAttendanceHeader: React.FC<EmployeeAttendanceHeaderProps> = ({
   viewMode,
   setViewMode,
-  employeeName,
-  department,
-  designation,
   showRequestsButton = false,
   userId, 
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [employeeName, setEmployeeName] = useState('');
+  const [department, setDepartment] = useState('');
 
-useEffect(() => {
-  if (!userId) return;  // 👈 prevents crash
+  // Fetch employee name and department
+  useEffect(() => {
+    if (!userId) return;
 
-  const fetchPendingCount = async () => {
-    const { count, error } = await supabase
-      .from("attendance_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("status", "PENDING");
+    const fetchUserDetails = async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('name, department_id')
+        .eq('id', userId)
+        .single();
 
-    if (!error) setPendingCount(count || 0);
-  };
+      if (!error && data) {
+        setEmployeeName(data.name);
 
-  fetchPendingCount();
-}, [userId]);
+        if (data.department_id) {
+          const { data: deptData } = await supabase
+            .from('departments')
+            .select('department_name')
+            .eq('id', data.department_id)
+            .single();
 
+          if (deptData) setDepartment(deptData.department_name);
+        }
+      }
+    };
 
+    fetchUserDetails();
+  }, [userId]);
+
+  // Fetch pending requests count
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchPendingCount = async () => {
+      const { count, error } = await supabase
+        .from("attendance_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("status", "PENDING");
+
+      if (!error) setPendingCount(count || 0);
+    };
+
+    fetchPendingCount();
+  }, [userId]);
 
   return (
     <div>
@@ -78,9 +102,9 @@ useEffect(() => {
         <div className="grid grid-cols-4 gap-4 mb-2 items-center">
           <p className="text-xs text-gray-600">Employee Name</p>
           <p className="text-xs text-gray-600">Department</p>
-          <p className="text-xs text-gray-600">Designation</p>
+          <p></p>
 
-          {/* Requests Button (optional) */}
+          {/* Requests Button */}
           <div className="flex justify-end">
             {showRequestsButton && (
               <button
@@ -89,8 +113,8 @@ useEffect(() => {
               >
                 Requests
                 <span className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-white text-[10px]">
-  {pendingCount}
-</span>
+                  {pendingCount}
+                </span>
               </button>
             )}
           </div>
@@ -109,18 +133,11 @@ useEffect(() => {
             value={department}
             className="border border-blue-300 rounded-full px-4 py-2 text-sm text-gray-700"
           />
-          <input
-            type="text"
-            readOnly
-            value={designation}
-            className="border border-blue-300 rounded-full px-4 py-2 text-sm text-gray-700"
-          />
           <div></div>
         </div>
       </div>
 
       {showModal && <RequestsModal onClose={() => setShowModal(false)} userId={userId} />}
-
     </div>
   );
 };

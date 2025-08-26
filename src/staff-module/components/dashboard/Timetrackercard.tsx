@@ -186,7 +186,7 @@ const companyId = workingData[0].company_id;
   const isCheckedOut = todayRecord?.check_out_time;
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
+    <div className="bg-white p-6 rounded-lg ">
       <h2 className="text-xl font-semibold mb-4">Time Tracker</h2>
       {isLoading ? (
         <p>Loading...</p>

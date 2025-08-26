@@ -15,41 +15,51 @@ interface PayRun {
   source: "Live" | "History";
 }
 
-const PayRunsTable: React.FC = () => {
+interface Props {
+  selectedMonth: string; // YYYY-MM
+  payRange: string;
+  search: string;
+  setSelectedMonth: (v: string) => void;
+}
+
+const PayRunsTable: React.FC<Props> = ({
+  selectedMonth,
+  payRange,
+  search,
+ 
+}) => {
   const [payRunsData, setPayRunsData] = useState<PayRun[]>([]);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<string>("2025-08"); // YYYY-MM
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     const fetchPayRuns = async () => {
       const today = new Date();
       const currentMonth = today.toISOString().slice(0, 7); // YYYY-MM
+      let formatted: PayRun[] = [];
 
-      // 🔑 if selected month is current → live, else → history
       if (selectedMonth === currentMonth) {
-        // ✅ fetch live payroll (current month)
+        // ✅ Live payroll
         const { data: liveData, error: liveErr } = await supabase
           .from("monthly_payroll_view")
-.select(`
-  user_id,
-  employee_name,
-  monthly_ctc,
-  base_pay,
-  deductions,
-  incentives,
-  reimbursements,
-  total_pay,
-  month
-`)
-
+          .select(`
+            user_id,
+            employee_name,
+            monthly_ctc,
+            base_pay,
+            deductions,
+            incentives,
+            reimbursements,
+            total_pay,
+            month
+          `);
 
         if (liveErr) {
           console.error("❌ Live payroll error:", liveErr);
           return;
         }
 
-        const formatted = (liveData || []).map((item: any) => ({
+        formatted = (liveData || []).map((item: any) => ({
           id: item.user_id,
           user_id: item.user_id,
           employee_name: item.employee_name,
@@ -60,10 +70,8 @@ const PayRunsTable: React.FC = () => {
           total_pay: item.total_pay,
           source: "Live" as const,
         }));
-
-        setPayRunsData(formatted);
       } else {
-        // ✅ fetch history payroll (saved months)
+        // ✅ History payroll
         const { data: historyData, error: histErr } = await supabase
           .from("payroll_history_view")
           .select(`
@@ -84,7 +92,7 @@ const PayRunsTable: React.FC = () => {
           return;
         }
 
-        const formatted = (historyData || []).map((item: any) => ({
+        formatted = (historyData || []).map((item: any) => ({
           id: item.user_id,
           user_id: item.user_id,
           employee_name: item.employee_name,
@@ -95,13 +103,30 @@ const PayRunsTable: React.FC = () => {
           total_pay: item.total_pay,
           source: "History" as const,
         }));
-
-        setPayRunsData(formatted);
       }
+
+      // 🔎 Apply filters
+      let results = formatted;
+
+      if (search) {
+        results = results.filter((p) =>
+          p.employee_name.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+
+      if (payRange === "0 - 1 Lakh") {
+        results = results.filter((p) => p.total_pay < 100000);
+      } else if (payRange === "1 Lakh - 2 Lakh") {
+        results = results.filter(
+          (p) => p.total_pay >= 100000 && p.total_pay < 200000
+        );
+      }
+
+      setPayRunsData(results);
     };
 
     fetchPayRuns();
-  }, [selectedMonth]);
+  }, [selectedMonth, payRange, search]);
 
   const handleViewMore = (userId: string) => {
     setSelectedUser(userId);
@@ -111,16 +136,7 @@ const PayRunsTable: React.FC = () => {
   return (
     <>
       <div className="overflow-x-auto bg-white rounded-xl shadow-sm p-4">
-        {/* Month selector */}
-        <div className="mb-3 flex items-center gap-3">
-          <label className="text-sm font-medium">Select Month:</label>
-          <input
-            type="month"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="border border-gray-300 rounded px-2 py-1"
-          />
-        </div>
+        
 
         <table className="min-w-full text-sm border-separate border-spacing-y-2">
           <thead>
@@ -149,7 +165,9 @@ const PayRunsTable: React.FC = () => {
                   <button
                     onClick={() => handleViewMore(item.user_id)}
                     className={`text-gray-600 hover:text-black ${
-                      item.source === "History" ? "opacity-40 cursor-not-allowed" : ""
+                      item.source === "History"
+                        ? "opacity-40 cursor-not-allowed"
+                        : ""
                     }`}
                     disabled={item.source === "History"}
                   >

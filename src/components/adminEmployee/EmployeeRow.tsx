@@ -8,8 +8,10 @@ interface Props {
     name: string;
     email: string;
     number: string | null;
+    department_name?: string;
+    status?: boolean;
   };
-  onRefresh: () => void; // ✅ New prop
+  onRefresh: () => void;
 }
 
 const EmployeeRow: React.FC<Props> = ({ employee, onRefresh }) => {
@@ -17,37 +19,68 @@ const EmployeeRow: React.FC<Props> = ({ employee, onRefresh }) => {
 
   return (
     <>
-      <tr className="bg-transparent">
-        <td colSpan={6}>
-          <div className="rounded-xl bg-blue-100 px-4 py-3 shadow mb-2 flex items-center justify-between gap-4 min-h-[70px]">
-            <div className="w-1/8 font-mono text-gray-600">{employee.id}</div>
-            <div className="w-1/6 ms-20 font-semibold text-gray-800">{employee.name}</div>
-            <div className="w-1/5 ms-22 text-gray-700">{employee.email}</div>
-            <div className="w-1/5 ms-10">
-              {employee.number ? (
-                <span>{employee.number}</span>
-              ) : (
-                <div className="text-orange-500 flex items-center gap-1 text-sm leading-tight">
-                  <FaExclamationCircle className="mt-[1px]" />
-                  <span>
-                    This employee's profile is incomplete.
-                    <a href="#" className="text-blue-500 underline ml-1">
-                      Complete Now
-                    </a>
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="w-1/3 ms-15">
-              <span className="text-green-600 font-semibold">Active</span>
-            </div>
-            <div className="w-1/6 text-gray-600">
-              <FaEye
-                className="cursor-pointer hover:text-blue-600"
-                onClick={() => setOpen(true)}
-              />
-            </div>
-          </div>
+      <tr className=" hover:bg-gray-50">
+        {/* Employee ID */}
+        <td className="px-4 py-3">
+          <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 font-mono text-sm">
+            {employee.id}
+          </span>
+        </td>
+
+        {/* Name */}
+        <td className="px-4 py-3">
+          <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-medium">
+            {employee.name}
+          </span>
+        </td>
+
+        {/* Work Email */}
+        <td className="px-4 py-3">
+          <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700">
+            {employee.email}
+          </span>
+        </td>
+
+        {/* Mobile */}
+        <td className="px-4 py-3">
+          {employee.number ? (
+            <span className="px-3 py-1 rounded-full bg-green-50 text-green-700">
+              {employee.number}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-orange-50 text-orange-600 text-sm">
+              <FaExclamationCircle />
+              Incomplete
+            </span>
+          )}
+        </td>
+
+        {/* Department */}
+        <td className="px-4 py-3">
+          <span className="px-3 py-1 rounded-full bg-purple-50 text-purple-700">
+            {employee.department_name || "-"}
+          </span>
+        </td>
+
+        {/* Status */}
+        <td className="px-4 py-3">
+          {employee.status ? (
+            <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 font-medium">
+              Active
+            </span>
+          ) : (
+            <span className="px-3 py-1 rounded-full bg-red-100 text-red-600 font-medium">
+              Inactive
+            </span>
+          )}
+        </td>
+
+        {/* Actions */}
+        <td className="px-4 py-3">
+          <FaEye
+            className="cursor-pointer text-gray-500 hover:text-blue-600"
+            onClick={() => setOpen(true)}
+          />
         </td>
       </tr>
 
@@ -57,7 +90,7 @@ const EmployeeRow: React.FC<Props> = ({ employee, onRefresh }) => {
           onClose={() => setOpen(false)}
           onUpdated={() => {
             setOpen(false);
-            onRefresh(); // ✅ Refresh table after update/delete
+            onRefresh();
           }}
         />
       )}

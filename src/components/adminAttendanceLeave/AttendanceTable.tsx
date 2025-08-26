@@ -4,15 +4,15 @@ import { useNavigate } from 'react-router-dom';
 
 interface AttendanceItem {
   user_id: number;
-  name: string;
+  employee_name: string;
   attendance_date: string;
   total_worked_hours: number;
   expected_hours: number;
-  check_in_latitudes: number[];
-  check_in_longitudes: number[];
-  check_out_latitudes: number[];
-  check_out_longitudes: number[];
-  attendance_statuses: string[];
+  check_in_latitudes: number[] | null;
+  check_in_longitudes: number[] | null;
+  check_out_latitudes: number[] | null;
+  check_out_longitudes: number[] | null;
+  attendance_statuses: string[] | null;
 }
 
 interface AttendanceTableProps {
@@ -32,28 +32,16 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({ attendanceData }) => 
     console.log(`Navigating to attendance detail for user ID: ${userId}`);
   };
 
-  // Helper to style status
   const getStatusStyle = (status: string) => {
-    if (status === 'Rejected') {
-      return 'text-red-600 font-bold';
-    }
-    if (status === 'Regularize') {
-      return 'text-orange-500 font-semibold';
-    }
-    if (status === 'Checked In') {
-      return 'text-green-600 font-semibold';
-    }
-    if (status === 'Approved Off') {
-      return 'text-blue-600 font-semibold';
-    }
-    if (status === 'Absent') {
-      return 'text-gray-500';
-    }
+    if (status === 'Rejected') return 'text-red-600 font-bold';
+    if (status === 'Regularize') return 'text-orange-500 font-semibold';
+    if (status === 'Checked In') return 'text-green-600 font-semibold';
+    if (status === 'Approved Off') return 'text-blue-600 font-semibold';
+    if (status === 'Absent') return 'text-gray-500';
     return '';
   };
-  
 
-  const renderLocationIcon = (lat?: number, long?: number) => {
+  const renderLocationIcon = (lat?: number | null, long?: number | null) => {
     if (!lat || !long) return '--';
     return (
       <a
@@ -85,28 +73,26 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({ attendanceData }) => 
         <tbody>
           {todayData.length > 0 ? (
             todayData.map((item, index) => {
-              // Get day name from attendance_date
               const dayName = item.attendance_date
                 ? new Date(item.attendance_date).toLocaleDateString('en-US', { weekday: 'long' })
                 : '--';
+
+              const status = item.attendance_statuses?.[0] ?? 'Absent';
+              const checkInLat = item.check_in_latitudes?.[0] ?? null;
+              const checkInLong = item.check_in_longitudes?.[0] ?? null;
+              const checkOutLat = item.check_out_latitudes?.[0] ?? null;
+              const checkOutLong = item.check_out_longitudes?.[0] ?? null;
+
               return (
-                <tr
-                  key={item.user_id}
-                  className={`${index % 2 === 0 ? 'bg-blue-50' : 'bg-white'} hover:bg-blue-100`}
-                >
-                  <td className="py-2 px-3">{index + 1}</td>
+<tr key={`${item.user_id}-${item.attendance_date}`}>                 
+   <td className="py-2 px-3">{index + 1}</td>
                   <td className="py-2 px-3">{dayName}</td>
-                  <td className="py-2 px-3">{item.name}</td>
+                  <td className="py-2 px-3">{item.employee_name}</td>
+                  <td className="py-2 px-3">{renderLocationIcon(checkInLat, checkInLong)}</td>
+                  <td className={`py-2 px-3 ${getStatusStyle(status)}`}>{status}</td>
+                  <td className="py-2 px-3">{renderLocationIcon(checkOutLat, checkOutLong)}</td>
                   <td className="py-2 px-3">
-                    {renderLocationIcon(item.check_in_latitudes[0], item.check_in_longitudes[0])}
-                  </td>
-                  <td className={`py-2 px-3 ${getStatusStyle(item.attendance_statuses[0])}`}>{item.attendance_statuses[0] || '--'}</td>
-                  <td className="py-2 px-3">
-                    {renderLocationIcon(item.check_out_latitudes[0], item.check_out_longitudes[0])}
-                  </td>
-                  <td className="py-2 px-3">
-                    {/* If status is Rejected, disable approve actions (example: hide Approve button) */}
-                    {item.attendance_statuses[0] === 'Rejected' ? (
+                    {status === 'Rejected' ? (
                       <span className="bg-red-200 px-3 py-1 text-xs text-red-700 rounded">Rejected</span>
                     ) : (
                       <button

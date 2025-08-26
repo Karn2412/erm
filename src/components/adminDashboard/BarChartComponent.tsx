@@ -39,12 +39,12 @@ const BarChartComponent: React.FC = () => {
   }, [userData?.company_id]);
 
   return (
-    <ResponsiveContainer width="100%" height={250}>
-      <BarChart data={data} margin={{ top: 10, right: 20, left: 20, bottom: 30 }}>
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={data} margin={{ top: 10, right: 20, left: 20, bottom: 10 }}>
         <XAxis dataKey="age_range" axisLine={false} tickLine={false} tick={{ fontSize: 14 }} />
         <YAxis hide />
         <Tooltip formatter={(value: number) => `${value}`} />
-        <Bar dataKey="value" fill={BAR_COLOR} radius={[10, 10, 0, 0]} barSize={30}>
+        <Bar dataKey="value" fill={BAR_COLOR} radius={[5, 5, 0, 0]} barSize={30}>
           <LabelList
             dataKey="value"
             position="top"

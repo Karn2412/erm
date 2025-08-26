@@ -73,30 +73,31 @@ const WorkRequestCard: React.FC = () => {
       <div className="flex">
         {/* Left column: actions */}
         <div className="flex flex-col space-y-4">
-          <button
-            onClick={() => setShowWFHModal(true)}
-            className="flex items-center space-x-2 bg-blue-900 text-white text-xs font-medium px-4 py-2 rounded-lg"
-          >
-            <FiHome className="text-xl" />
-            <span>Work From Home Request</span>
-          </button>
+  <button
+    onClick={() => setShowWFHModal(true)}
+    className="flex items-center justify-start space-x-2 w-48 bg-blue-900 text-white text-xs font-medium px-4 py-2 rounded-lg"
+  >
+    <FiHome className="text-xl" />
+    <span>Work From Home Request</span>
+  </button>
 
-          <button
-            onClick={() => setShowLeaveModal(true)}
-            className="flex items-center space-x-2 ml-4 w-40 bg-blue-500 text-white text-xs font-medium px-4 py-2 rounded-lg"
-          >
-            <BiCalendarCheck className="text-xl" />
-            <span>Leave Request</span>
-          </button>
+  <button
+    onClick={() => setShowLeaveModal(true)}
+    className="flex items-center justify-start space-x-2 w-48 bg-blue-500 text-white text-xs font-medium px-4 py-2 rounded-lg"
+  >
+    <BiCalendarCheck className="text-xl" />
+    <span>Leave Request</span>
+  </button>
 
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center space-x-2 ml-6 w-32 bg-orange-500 text-white text-xs font-medium px-4 py-2 rounded-lg"
-          >
-            <MdOutlineAccessTime className="text-xl" />
-            <span>Regularize</span>
-          </button>
-        </div>
+  <button
+    onClick={() => setShowModal(true)}
+    className="flex items-center justify-start space-x-2 w-48 bg-orange-500 text-white text-xs font-medium px-4 py-2 rounded-lg"
+  >
+    <MdOutlineAccessTime className="text-xl" />
+    <span>Regularize</span>
+  </button>
+</div>
+
 
         {/* Right column: summary */}
         <div className="ml-8 flex-1 space-y-3 text-sm bg-gray-100 p-6 rounded-2xl text-gray-700">

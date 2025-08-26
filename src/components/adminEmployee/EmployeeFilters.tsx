@@ -1,33 +1,61 @@
-import React from 'react';
-import { MdLocationOn, MdApartment } from 'react-icons/md';
-import { FaUserTie } from 'react-icons/fa';
-import { FiFilter } from 'react-icons/fi';
+import { useEffect, useState } from "react";
+import { MdApartment } from "react-icons/md";
+import { supabase } from "../../supabaseClient";
+import { useUser } from "../../context/UserContext";
 
-const EmployeeFilters = () => {
-  const filters = [
-    { label: 'Select Work Location', color: 'bg-purple-100', icon: <MdLocationOn className="text-purple-600 text-lg" /> },
-    { label: 'Select Department', color: 'bg-blue-100', icon: <MdApartment className="text-blue-600 text-lg" /> },
-    { label: 'Select Designation', color: 'bg-red-100', icon: <FaUserTie className="text-red-600 text-lg" /> },
-    { label: 'More Filters', color: 'bg-pink-100', icon: <FiFilter className="text-pink-600 text-lg" /> },
-  ];
+interface Department {
+  id: string;
+  department_name: string;
+}
+
+const EmployeeFilters = ({
+  department,
+  setDepartment,
+}: {
+  department: string;
+  setDepartment: (val: string) => void;
+}) => {
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const { userData } = useUser(); // ✅ has company_id
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      if (!userData?.company_id) return;
+
+      const { data, error } = await supabase
+        .from("departments")
+        .select("id, department_name")
+        .eq("company_id", userData.company_id);
+
+      if (error) {
+        console.error("Error fetching departments:", error.message);
+        return;
+      }
+      setDepartments(data || []);
+    };
+
+    fetchDepartments();
+  }, [userData]);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {filters.map((filter, i) => (
-        <button
-          key={i}
-          className={`flex items-center justify-between ${filter.color} px-4 py-2 rounded text-sm font-medium shadow`}
+      <div className="flex items-center bg-blue-100 px-3 py-2 rounded shadow w-full">
+        <MdApartment className="text-blue-600 text-lg mr-2" />
+        <select
+          value={department}
+          onChange={(e) => setDepartment(e.target.value)}
+          className="bg-transparent outline-none w-full text-sm font-medium"
         >
-          <div className="flex items-center gap-2">
-            {filter.icon}
-            {filter.label}
-          </div>
-          <span className="text-lg">⌵</span>
-        </button>
-      ))}
+          <option value="">All Departments</option>
+          {departments.map((dep) => (
+            <option key={dep.id} value={dep.department_name}>
+              {dep.department_name}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 };
 
 export default EmployeeFilters;
-

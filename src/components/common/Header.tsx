@@ -39,44 +39,98 @@ const Header = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-// 🔹 Fetch Pending Requests (from view)
-// 🔹 Fetch Pending Requests (from view)
+  // Fetch requests
+// 🔹 Fetch requests for admin/staff
 useEffect(() => {
   if (!userData?.company_id) return;
 
   const fetchRequests = async () => {
     try {
-      const { data, error } = await supabase
-        .from("pending_requests_view")
-        .select("*")
-        .eq("company_id", userData.company_id);
+      let data, error;
 
-      if (error) throw error;
+      if (userData.role === "Admin") {
+        // Admin: fetch all PENDING requests from attendance_requests and reimbursements
+        const { data: attendanceData, error: attendanceError } = await supabase
+          .from("attendance_requests")
+          .select(`
+            id,
+            user_id,
+            request_type,
+            status,
+            reason,
+            created_at
+          `)
+          .eq("company_id", userData.company_id)
+          .eq("status", "PENDING")
+          .order("created_at", { ascending: false });
 
-      // Normalize for UI
-      const combined = (data || []).map((r) => ({
-        id: r.request_id,
-        type: r.request_source === "ATTENDANCE" ? r.request_type : "REIMBURSEMENT",
+        if (attendanceError) throw attendanceError;
+
+        const { data: reimbursementData, error: reimbursementError } = await supabase
+          .from("reimbursements")
+          .select(`
+            id,
+            user_id,
+            category as request_type,
+            status,
+            description,
+            expense_date as created_at
+          `)
+          .eq("company_id", userData.company_id)
+          .eq("status", "PENDING")
+          .order("created_at", { ascending: false });
+
+        if (reimbursementError) throw reimbursementError;
+
+        data = [
+          ...(attendanceData || []).map((r) => ({
+            ...r,
+            request_source: "ATTENDANCE",
+            detail: r.reason,
+          })),
+          ...(reimbursementData || []).map((r) => ({
+            ...r,
+            request_source: "REIMBURSEMENT",
+            detail: r.description,
+          })),
+        ];
+      } else {
+        // Staff: show only APPROVED or REJECTED requests
+        ({ data, error } = await supabase
+          .from("attendance_requests")
+          .select(`
+            id,
+            request_type,
+            status,
+            reason,
+            created_at
+          `)
+          .eq("user_id", userData.id)
+          .in("status", ["APPROVED", "REJECTED"])
+          .order("created_at", { ascending: false }));
+      }
+
+      const normalized = (data || []).map((r: any) => ({
+        id: r.id,
+        type: r.request_type,
         status: r.status,
         created_at: r.created_at,
-        detail: r.description,
-        userId: r.user_id,
-        requestedBy: r.user_name || "Unknown User",
+        detail: r.detail || r.reason || r.description || "No details",
+        requestedBy: userData.role === "Admin" ? r.user_id : userData.name,
         navigateTo:
-          r.request_source === "ATTENDANCE"
-            ? `/attendance-detail/${r.user_id}` // ✅ new attendance route
-            : `/reimbursements/${r.user_id}`,   // ✅ new reimbursement route
+          r.request_source === "REIMBURSEMENT"
+            ? `/reimbursements/${r.user_id}`
+            : `/attendance-detail/${r.user_id}`,
       }));
 
-      setRequests(combined);
+      setRequests(normalized);
     } catch (err) {
-      console.error("Error fetching pending requests view:", err);
+      console.error("Error fetching requests:", err);
     }
   };
 
   fetchRequests();
-}, [userData?.company_id]);
-
+}, [userData?.company_id, userData?.id, userData?.role]);
 
 
   return (
@@ -124,11 +178,6 @@ useEffect(() => {
             className="text-gray-600 cursor-pointer"
             onClick={() => setShowNotifModal(true)}
           />
-          {requests.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1 rounded-full">
-              {requests.length}
-            </span>
-          )}
         </div>
 
         {/* Profile Info with Dropdown */}
@@ -138,7 +187,7 @@ useEffect(() => {
             onClick={() => setDropdownOpen((prev) => !prev)}
           >
             <img
-              src="https://www.profilebakery.com/wp-content/uploads/2023/04/LINKEDIN-Profile-Picture-AI-400x400.jpg"
+              src="https://www.pngplay.com/wp-content/uploads/12/User-Avatar-Profile-Transparent-Free-PNG-Clip-Art.png"
               alt="Profile"
               className="rounded-full w-[30px] h-[30px]"
             />
@@ -168,7 +217,7 @@ useEffect(() => {
           <div className="bg-white rounded-lg shadow-lg w-[400px] max-h-[500px] overflow-y-auto">
             {/* Header */}
             <div className="flex justify-between items-center border-b px-4 py-2">
-              <h2 className="text-lg font-semibold">Pending Requests</h2>
+              <h2 className="text-lg font-semibold">Requests</h2>
               <FaTimes
                 className="cursor-pointer text-gray-600"
                 onClick={() => setShowNotifModal(false)}
@@ -178,7 +227,7 @@ useEffect(() => {
             {/* Requests List */}
             <div className="p-4 space-y-3">
               {requests.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center">No pending requests</p>
+                <p className="text-sm text-gray-500 text-center">No requests</p>
               ) : (
                 requests.map((req) => (
                   <div
@@ -187,20 +236,25 @@ useEffect(() => {
                       setShowNotifModal(false);
                       navigate(req.navigateTo);
                     }}
-                    className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                    className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer flex justify-between items-center"
                   >
-                    <p className="text-sm font-medium">
-                      {req.type} Request {req.amount ? `- ₹${req.amount}` : ""}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Requested by: {req.requestedBy}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {req.detail || "No details"}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {new Date(req.created_at).toLocaleString()}
-                    </p>
+                    <div>
+                      <p className="text-sm font-medium">{req.type} Request</p>
+                      <p className="text-xs text-gray-500">{req.detail || "No details"}</p>
+                      <p className="text-xs text-gray-400">{new Date(req.created_at).toLocaleString()}</p>
+                    </div>
+
+                    {userData.role !== "Admin" && (
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full font-semibold ${
+                          req.status === "APPROVED"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {req.status}
+                      </span>
+                    )}
                   </div>
                 ))
               )}
