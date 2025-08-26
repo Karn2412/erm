@@ -1,5 +1,5 @@
 // Employeeattendence.tsx
-import React, { useEffect, useState } from 'react'
+import  { useEffect, useState } from 'react'
 
 import WorkRequestCard from '../../components/dashboard/WorkRequestCard'
 import TimeTrackerCard from '../../components/dashboard/Timetrackercard'
@@ -42,9 +42,10 @@ const EmployeeAttendancePage = () => {
   const today = new Date()
   const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth())
   const [selectedYear, setSelectedYear] = useState<number>(today.getFullYear())
+  const [regularizeDate, setRegularizeDate] = useState<string | null>(null);
+  console.log(regularizeDate);
 
-  const [regularizeDate, setRegularizeDate] = useState<string | null>(null)
-
+  //
   const getColorBorder = (status: string) => {
     switch (status) {
       case 'Checked In': return 'border-green-500';

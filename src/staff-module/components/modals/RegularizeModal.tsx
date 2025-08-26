@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { FiSend } from "react-icons/fi";
 import { useUser } from "../../../context/UserContext";
 import { supabase } from "../../../supabaseClient";

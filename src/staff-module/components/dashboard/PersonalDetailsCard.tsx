@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import  { useEffect } from 'react';
 import { FaExclamationCircle } from 'react-icons/fa';
 import { supabase } from '../../../supabaseClient'; // update path if needed
 import { useUser } from '../../../context/UserContext';

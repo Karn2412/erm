@@ -6,7 +6,10 @@ interface EmployeeAttendanceHeaderProps {
   viewMode: 'weekly' | 'monthly';
   setViewMode: Dispatch<SetStateAction<'weekly' | 'monthly'>>;
   showRequestsButton?: boolean;
-  userId: string; // User ID to fetch name & department
+  userId: string | number; // User ID to fetch name & department
+  employeeName: string
+  department: string
+  
 }
 
 const EmployeeAttendanceHeader: React.FC<EmployeeAttendanceHeaderProps> = ({
@@ -137,7 +140,7 @@ const EmployeeAttendanceHeader: React.FC<EmployeeAttendanceHeaderProps> = ({
         </div>
       </div>
 
-      {showModal && <RequestsModal onClose={() => setShowModal(false)} userId={userId} />}
+      {showModal && <RequestsModal onClose={() => setShowModal(false)} userId={String(userId)} />}
     </div>
   );
 };

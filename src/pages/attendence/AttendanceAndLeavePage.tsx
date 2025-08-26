@@ -3,6 +3,8 @@ import AttendanceFilterAndLegend from '../../components/adminAttendanceLeave/Att
 import AttendanceTable from '../../components/adminAttendanceLeave/AttendanceTable';
 import { supabase } from '../../supabaseClient';
 
+
+
 const AttendanceAndLeavePage: React.FC = () => {
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,7 +75,7 @@ const AttendanceAndLeavePage: React.FC = () => {
             user_id: emp.id,
             employee_name: emp.name,
             department_id: emp.department_id,
-            department_name: emp.departments?.department_name ?? "-",
+            // department_name: emp.departments?.department_name ?? "-",
             attendance_date: selectedDate,
             total_worked_hours: 0,
             expected_hours: 8,
@@ -81,9 +83,11 @@ const AttendanceAndLeavePage: React.FC = () => {
             check_in_longitudes: null,
             check_out_latitudes: null,
             check_out_longitudes: null,
+           
+
             attendance_statuses: ["Absent"],
           };
-          console.log("Absent record created:", emp.name);
+         
 
         });
 

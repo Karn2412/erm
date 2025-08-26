@@ -277,7 +277,7 @@ const EmployeeModal = ({
               .filter(([key]) => key !== "documents" && key !== "auth_id")
               .map(([key, value]) => (
                 <p key={key}>
-                  <b>{key.replace(/_/g, " ").toUpperCase()}:</b> {value || "-"}
+                  <b>{key.replace(/_/g, " ").toUpperCase()}:</b> {String(value || "-")}
                 </p>
               ))}
         </div>

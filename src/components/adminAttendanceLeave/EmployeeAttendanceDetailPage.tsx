@@ -24,11 +24,10 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
 
 
   const today = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
-  const [selectedYear, setSelectedYear] = useState(today.getFullYear());
+  const [selectedMonth, ] = useState(today.getMonth());
+  const [selectedYear, ] = useState(today.getFullYear());
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const getCurrentWeekDates = () => {
     const start = startOfWeek(today, { weekStartsOn: 1 });
@@ -84,8 +83,7 @@ useEffect(() => {
     if (!userId) return;
 
     const fetchAttendance = async () => {
-      setLoading(true);
-
+      
       const startDate = format(new Date(selectedYear, selectedMonth, 1), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(selectedYear, selectedMonth)), 'yyyy-MM-dd');
 
@@ -100,7 +98,7 @@ useEffect(() => {
       if (error) {
         console.error('Error fetching attendance:', error);
         setAttendanceData([]);
-        setLoading(false);
+       
         return;
       }
 
@@ -159,7 +157,7 @@ useEffect(() => {
       }
 
       setAttendanceData(transformed);
-      setLoading(false);
+      
     };
 
     fetchAttendance();
@@ -176,9 +174,9 @@ useEffect(() => {
   setViewMode={setViewMode}
   employeeName={employee?.name || ""}
   department={employee?.department || ""}
-  designation={employee?.designation || ""}
+  // designation={employee?.designation || ""}
   showRequestsButton={true}
-  userId={userId}
+  userId={userId ?? ""}
 />
 
           <div

@@ -6,8 +6,10 @@ import SectionStepper from "../../components/personaldetails/SectionTabs";
 import BankingDetailsForm from "../../components/personaldetails/BankingDetailForm";
 import DocumentUploadForm from "../../components/personaldetails/DocumentUploadForm";
 import { supabase } from "../../../supabaseClient";
+import { useUser } from "../../../context/UserContext";
 
 const PersonalDetailsPage: React.FC = () => {
+  const { userData } = useUser();
 
   const [currentSection, setCurrentSection] = useState(1);
 
@@ -48,6 +50,7 @@ const handleSubmit = async () => {
   const { data, error } = await supabase.storage
     .from("usersdocuments")
     .upload(path, file, { cacheControl: "3600", upsert: true });
+    console.log("Upload response:", { data, error });
 
   if (error) {
     console.error("Upload error:", error.message);
@@ -183,6 +186,7 @@ const handleSubmit = async () => {
             <div className="bg-white p-6 rounded-2xl shadow-lg">
               {currentSection === 1 && (
                 <BasicDetailsForm
+                   authId={userData?.id || userData?.auth_id || ''}
                   formData={basicDetails}
                   setFormData={setBasicDetails}
                 />

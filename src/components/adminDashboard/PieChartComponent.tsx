@@ -111,6 +111,8 @@ const PieChartComponent: React.FC = () => {
               endAngle={450}
             >
               {data.map((entry, index) => (
+                console.log(entry),
+
                 <Cell
                   key={`cell-${index}`}
                   fill={COLORS[index % COLORS.length]}

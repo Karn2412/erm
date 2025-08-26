@@ -38,7 +38,6 @@ const LoginPage: React.FC = () => {
       return;
     }
 
-    // ✅ Get role from user_roles + roles
     const { data: roleData, error: roleError } = await supabase
       .from("user_roles")
       .select("id, company_id, roles(role)")
@@ -50,7 +49,13 @@ const LoginPage: React.FC = () => {
       return;
     }
 
-    const actualRole = roleData.roles?.role;
+    // Handle both single object and array cases
+    interface RoleType {
+      role: string;
+    }
+    const rolesData = roleData.roles as RoleType | RoleType[];
+    const actualRole = Array.isArray(rolesData) ? rolesData[0]?.role : rolesData?.role;
+    console.log(actualRole);
 
     // ✅ Check if selected role matches actual role
     if (roleType === "admin" && actualRole !== "admin") {
@@ -89,7 +94,7 @@ const LoginPage: React.FC = () => {
           Enter your credentials to access your account
         </p>
 
-        
+
 
 
         {/* Email Input */}
@@ -122,16 +127,15 @@ const LoginPage: React.FC = () => {
 
         {/* Role Selection */}
 
-                <div className="flex justify-center gap-4 mb-6">
+        <div className="flex justify-center gap-4 mb-6">
           {["admin", "staff"].map((r) => (
             <button
               key={r}
               onClick={() => setRoleType(r as "admin" | "staff")}
-              className={`px-6 py-2 rounded-lg text-sm font-medium border transition-all duration-200 ${
-                roleType === r
+              className={`px-6 py-2 rounded-lg text-sm font-medium border transition-all duration-200 ${roleType === r
                   ? "bg-[#002B5B] text-white border-[#002B5B]"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               {r === "admin" ? "Admin Login" : "Staff Login"}
             </button>

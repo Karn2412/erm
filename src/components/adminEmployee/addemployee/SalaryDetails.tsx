@@ -43,6 +43,8 @@ const SalaryDetailsForm: React.FC<SalaryDetailsFormProps> = ({ userId, companyId
     }
 
     const { data, error } = await supabase
+    
+    
       .from("salary_details")
       .insert([
         {
@@ -54,7 +56,11 @@ const SalaryDetailsForm: React.FC<SalaryDetailsFormProps> = ({ userId, companyId
           regime_it: regimeIT,
           monthly_ctc: monthlyCTC,
         },
+        
+        
       ]);
+      console.log(data);
+      
 
     if (error) {
       console.error(error);

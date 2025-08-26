@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaTimes, FaSearchPlus, FaExpandArrowsAlt, FaCheck } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
 
 interface TemplatePreviewModalProps {
   onClose: () => void;

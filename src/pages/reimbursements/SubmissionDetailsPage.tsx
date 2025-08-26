@@ -17,7 +17,7 @@ interface SubmissionItem {
 
 interface Employee {
   name: string;
-  department: string;
+  // department: string;
   avatar: string;
 }
 
@@ -41,7 +41,7 @@ const SubmissionDetailsPage: React.FC = () => {
 
       setEmployee({
         name: data.name,
-        department: data.departments?.department_name || "-",
+        // department: data.departments?.department_name || "-",
         avatar: "https://www.pngplay.com/wp-content/uploads/12/User-Avatar-Profile-Transparent-Free-PNG-Clip-Art.png",
       });
       console.log("✅ Employee data fetched:", data);
@@ -92,7 +92,7 @@ const SubmissionDetailsPage: React.FC = () => {
             {employee && (
               <EmployeeDetailsCard
                 name={employee.name}
-                department={employee.department}
+                // department={employee.department}
                 avatar={employee.avatar}
               />
             )}

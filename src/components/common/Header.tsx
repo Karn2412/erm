@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import  { useState, useRef, useEffect } from "react";
 import { FaSearch, FaBell, FaTimes } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../supabaseClient";
@@ -47,6 +47,8 @@ useEffect(() => {
   const fetchRequests = async () => {
     try {
       let data, error;
+      console.log(error);
+      
 
       if (userData.role === "Admin") {
         // Admin: fetch all PENDING requests from attendance_requests and reimbursements
@@ -83,17 +85,20 @@ useEffect(() => {
         if (reimbursementError) throw reimbursementError;
 
         data = [
-          ...(attendanceData || []).map((r) => ({
+          ...(attendanceData || []).map((r: Record<string, any>) => ({
             ...r,
             request_source: "ATTENDANCE",
             detail: r.reason,
           })),
-          ...(reimbursementData || []).map((r) => ({
+          ...(reimbursementData || []).map((r: Record<string, any>) => ({
             ...r,
             request_source: "REIMBURSEMENT",
             detail: r.description,
+            
+
           })),
         ];
+       
       } else {
         // Staff: show only APPROVED or REJECTED requests
         ({ data, error } = await supabase

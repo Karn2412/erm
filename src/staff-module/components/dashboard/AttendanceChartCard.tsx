@@ -120,29 +120,37 @@ const AttendanceChartCard: React.FC<Props> = () => {
               ))}
 
               <Label
-                position="center"
-                content={({ viewBox: { cx, cy } }) => (
-                  <text
-                    x={cx}
-                    y={cy}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                  >
-                    <tspan
-                      x={cx}
-                      dy="-0.5em"
-                      fontSize="16"
-                      fontWeight="600"
-                      fill="#111"
-                    >
-                      {present.toFixed(0)}%
-                    </tspan>
-                    <tspan x={cx} dy="1.4em" fontSize="12" fill="#555">
-                      Present
-                    </tspan>
-                  </text>
-                )}
-              />
+  position="center"
+  content={({ viewBox }) => {
+    if (!viewBox || typeof viewBox !== 'object' || !('cx' in viewBox) || !('cy' in viewBox)) {
+      return null;
+    }
+    
+    const { cx, cy } = viewBox as { cx: number; cy: number };
+    
+    return (
+      <text
+        x={cx}
+        y={cy}
+        textAnchor="middle"
+        dominantBaseline="middle"
+      >
+        <tspan
+          x={cx}
+          dy="-0.5em"
+          fontSize="16"
+          fontWeight="600"
+          fill="#111"
+        >
+          {present.toFixed(0)}%
+        </tspan>
+        <tspan x={cx} dy="1.4em" fontSize="12" fill="#555">
+          Present
+        </tspan>
+      </text>
+    );
+  }}
+/>
             </Pie>
           </PieChart>
 
