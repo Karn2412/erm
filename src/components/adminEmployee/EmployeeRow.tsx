@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { FaEye, FaExclamationCircle } from "react-icons/fa";
-import EmployeeModal from "./addemployee/employeemodal/EmployeeModal";
+
 
 interface Props {
   employee: {
@@ -11,90 +11,93 @@ interface Props {
     department_name?: string;
     status?: boolean;
   };
+  index: number;           // ✅ required, 0-based
   onRefresh: () => void;
+  onOpenModal: () => void; 
 }
 
-const EmployeeRow: React.FC<Props> = ({ employee, onRefresh }) => {
+const EmployeeRow: React.FC<Props> = ({ employee, index, onOpenModal }) => {
   const [open, setOpen] = useState(false);
+  console.log(open);
+  const profileIncomplete = !employee.department_name || !employee.number;
+  const rowBg = index % 2 === 0 ? "bg-indigo-50" : "bg-blue-50";
+
+  
 
   return (
     <>
-      <tr className=" hover:bg-gray-50">
-        {/* Employee ID */}
-        <td className="px-4 py-3">
-          <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 font-mono text-sm">
-            {employee.id}
-          </span>
-        </td>
+    <>
+      <tr className="transition">
+        {/* Profile (index + avatar) — left rounded */}
+       <td className={`px-4 py-3 ${rowBg} rounded-l-2xl`}>
+  <div className="flex items-center">
+    {/* Avatar */}
+    <div className="relative w-8 h-8 rounded-full  ring-1 ring-black/5">
+      <img
+        src="https://previews.123rf.com/images/archivector/archivector1902/archivector190200317/117964202-abstract-sign-avatar-men-icon-male-profile-white-symbol-on-gray-circle-background-vector.jpg" // Dummy avatar
+        alt="User Avatar"
+        className="w-full h-full object-cover"
+      />
+    </div>
 
-        {/* Name */}
-        <td className="px-4 py-3">
-          <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-medium">
-            {employee.name}
-          </span>
-        </td>
+    {/* Index Number */}
+    <span className="ml-1 text-gray-800 text-sm font-semibold">
+      {index + 1}
+    </span>
+  </div>
+</td>
+
+
+        {/* Employee Name */}
+        <td className={`px-4 py-3 font-medium text-gray-800 ${rowBg}`}>{employee.name}</td>
 
         {/* Work Email */}
-        <td className="px-4 py-3">
-          <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700">
-            {employee.email}
-          </span>
-        </td>
+        <td className={`px-4 py-3 text-sm text-gray-700 ${rowBg}`}>{employee.email}</td>
 
-        {/* Mobile */}
-        <td className="px-4 py-3">
-          {employee.number ? (
-            <span className="px-3 py-1 rounded-full bg-green-50 text-green-700">
-              {employee.number}
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-orange-50 text-orange-600 text-sm">
+        {/* Department / Incomplete */}
+        <td className={`px-4 py-3 ${rowBg}`}>
+          {profileIncomplete ? (
+            <div className="flex items-center gap-2 text-red-600 bg-red-50 px-3 py-1 rounded-lg text-sm">
               <FaExclamationCircle />
-              Incomplete
-            </span>
+              This employee’s profile is incomplete.
+              <button
+                className="ml-2 text-blue-700 hover:underline font-medium"
+                onClick={() => setOpen(true)}
+              >
+                Complete Now
+              </button>
+            </div>
+          ) : (
+            <span className="text-sm text-gray-800">{employee.department_name}</span>
           )}
-        </td>
-
-        {/* Department */}
-        <td className="px-4 py-3">
-          <span className="px-3 py-1 rounded-full bg-purple-50 text-purple-700">
-            {employee.department_name || "-"}
-          </span>
         </td>
 
         {/* Status */}
-        <td className="px-4 py-3">
-          {employee.status ? (
-            <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 font-medium">
-              Active
-            </span>
-          ) : (
-            <span className="px-3 py-1 rounded-full bg-red-100 text-red-600 font-medium">
-              Inactive
-            </span>
-          )}
+        <td className={`px-4 py-3 ${rowBg}`}>
+          {!profileIncomplete &&
+            (employee.status ? (
+              <span className="flex items-center text-green-700 text-sm font-medium">
+                <span className="w-2 h-2 rounded-full bg-green-500 mr-1" />
+                Active
+              </span>
+            ) : (
+              <span className="text-sm text-gray-500">Inactive</span>
+            ))}
         </td>
 
-        {/* Actions */}
-        <td className="px-4 py-3">
+        {/* View More — right rounded */}
+        <td className={`px-4 py-3 ${rowBg} rounded-r-3xl`}>
           <FaEye
-            className="cursor-pointer text-gray-500 hover:text-blue-600"
-            onClick={() => setOpen(true)}
+            className="cursor-pointer text-gray-600 hover:text-blue-700"
+            onClick={onOpenModal}
           />
         </td>
       </tr>
 
-      {open && (
-        <EmployeeModal
-          employee={employee}
-          onClose={() => setOpen(false)}
-          onUpdated={() => {
-            setOpen(false);
-            onRefresh();
-          }}
-        />
-      )}
+      
     </>
+    
+   </>
   );
 };
 

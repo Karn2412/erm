@@ -54,13 +54,32 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ authId, formData, s
     if (authId) fetchUserDetails();
   }, [authId, setFormData]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
+ const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const { name, value } = e.target;
+  let updatedData = { ...formData, [name]: value };
+
+  // 🔹 If DOB is entered, calculate age automatically
+  if (name === "date_of_birth" && value) {
+    const today = new Date();
+    const birthDate = new Date(value);
+
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    // adjust if birthday hasn't occurred yet this year
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    updatedData.age = age >= 0 ? age : 0; // avoid negative
+  }
+
+  setFormData(updatedData);
+};
+
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-lg max-h-screen overflow-y-auto">
+    <div className="bg-white p-6 rounded-2xl  max-h-screen overflow-y-auto">
       <form className="space-y-6">
         {/* Row 1 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -124,23 +143,42 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ authId, formData, s
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Differently Abled Type
-            </label>
-            <select
-              name="differently_abled_id"
-              className={pillSelect}
-              value={formData.differently_abled_id || ''}
-              onChange={handleChange}
-            >
-              <option value="">Select Type</option>
-              {abledTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.type_name}
-                </option>
-              ))}
-            </select>
-          </div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Differently Abled Type
+  </label>
+
+  <div className="relative">
+    <select
+      name="differently_abled_id"
+      className={`${pillSelect} appearance-none pr-12`} // same style as State dropdown
+      value={formData.differently_abled_id || ""}
+      onChange={handleChange}
+    >
+      <option value="">Select Type</option>
+      {abledTypes.map((type) => (
+        <option key={type.id} value={type.id}>
+          {type.type_name}
+        </option>
+      ))}
+    </select>
+
+    {/* custom dropdown arrow inside input */}
+    <div className="absolute inset-y-0 right-3 flex items-center">
+      <div className="w-6 h-6 rounded-full border border-blue-400 flex items-center justify-center bg-blue-50">
+        <svg
+          className="w-3 h-3 text-blue-500"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -190,20 +228,40 @@ const BasicDetailsForm: React.FC<BasicDetailsFormProps> = ({ authId, formData, s
           {/* State */}
 <div>
   <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
-  <select
-    name="state"
-    className={pillSelect}
-    value={formData.state || ''}   // use `state` not `state_id`
-    onChange={handleChange}
-  >
-    <option value="">Select State</option>
-    {states.map((state) => (
-      <option key={state.id} value={state.name}>
-        {state.name}
-      </option>
-    ))}
-  </select>
+
+  <div className="relative">
+    <select
+      name="state"
+      className={`${pillSelect} appearance-none pr-12`} // pr-12 leaves space for the icon
+      value={formData.state || ""}
+      onChange={handleChange}
+    >
+      <option value="">Select State</option>
+      {states.map((state) => (
+        <option key={state.id} value={state.name}>
+          {state.name}
+        </option>
+      ))}
+    </select>
+
+    {/* custom dropdown icon inside input box */}
+    <div className="absolute inset-y-0 right-3 flex items-center">
+      <div className="w-6 h-6 rounded-full border border-blue-400 flex items-center justify-center bg-blue-50">
+        <svg
+          className="w-3 h-3 text-blue-500"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+    </div>
+  </div>
 </div>
+
+
 
 
 

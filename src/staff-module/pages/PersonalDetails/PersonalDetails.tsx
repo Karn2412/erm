@@ -183,7 +183,7 @@ const handleSubmit = async () => {
               currentSection={currentSection}
               onSectionChange={setCurrentSection}
             />
-            <div className="bg-white p-6 rounded-2xl shadow-lg">
+            <div className="bg-white p-6 rounded-2xl ">
               {currentSection === 1 && (
                 <BasicDetailsForm
                    authId={userData?.id || userData?.auth_id || ''}
@@ -201,6 +201,12 @@ const handleSubmit = async () => {
                 <DocumentUploadForm
                   formData={usersdocuments}
                   setFormData={setDocuments}
+                   requiredDocs={[
+    "Cancelled Cheque / Bank Statement / Passbook Copy",
+    "PAN Card",
+    "Aadhar Card",
+    "Passport Photo", // 👈 you can add/remove here
+  ]}
                 />
               )}
             </div>

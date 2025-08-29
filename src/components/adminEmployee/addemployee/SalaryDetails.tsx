@@ -181,37 +181,38 @@ const SalaryDetailsForm: React.FC<SalaryDetailsFormProps> = ({ userId, companyId
 
       {/* CTC Earnings Table */}
       <div className="mt-6 rounded-md overflow-hidden">
-        <table className="min-w-full text-sm text-left border-separate border-spacing-y-2">
-          <thead className="bg-gray-50 text-gray-700">
-            <tr>
-              <th className="px-4 py-2">Earnings</th>
-              <th className="px-4 py-2">% Earnings on CTC</th>
-              <th className="px-4 py-2">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="bg-blue-50">
-              <td className="px-4 py-2">Basic Salary &amp; DA</td>
-              <td className="px-4 py-2">55.00%</td>
-              <td className="px-4 py-2">{basicSalary.toLocaleString()}</td>
-            </tr>
-            <tr className="bg-indigo-50">
-              <td className="px-4 py-2">HRA</td>
-              <td className="px-4 py-2">27.50%</td>
-              <td className="px-4 py-2">{hra.toLocaleString()}</td>
-            </tr>
-            <tr className="bg-blue-50">
-              <td className="px-4 py-2">Special Allowance</td>
-              <td className="px-4 py-2">17.50%</td>
-              <td className="px-4 py-2">{specialAllowance.toLocaleString()}</td>
-            </tr>
-            <tr className="bg-blue-300 font-semibold">
-              <td className="px-4 py-2">Gross Earnings</td>
-              <td></td>
-              <td className="px-4 py-2">{monthlyCTC?.toLocaleString() || 0}</td>
-            </tr>
-          </tbody>
-        </table>
+       <table className="min-w-full text-sm text-left border-separate border-spacing-y-2">
+  <thead className="bg-gray-50 text-gray-700">
+    <tr>
+      <th className="px-4 py-2">Earnings</th>
+      <th className="px-4 py-2">% Earnings on CTC</th>
+      <th className="px-4 py-2">Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr className="bg-blue-50 rounded-xl overflow-hidden border">
+      <td className="px-4 py-2 rounded-l-2xl">Basic Salary &amp; DA</td>
+      <td className="px-4 py-2">55.00%</td>
+      <td className="px-4 py-2 rounded-r-2xl">{basicSalary.toLocaleString()}</td>
+    </tr>
+    <tr className="bg-indigo-50 rounded-xl overflow-hidden border">
+      <td className="px-4 py-2 rounded-l-2xl">HRA</td>
+      <td className="px-4 py-2">27.50%</td>
+      <td className="px-4 py-2 rounded-r-2xl">{hra.toLocaleString()}</td>
+    </tr>
+    <tr className="bg-blue-50 rounded-xl overflow-hidden border">
+      <td className="px-4 py-2 rounded-l-2xl">Special Allowance</td>
+      <td className="px-4 py-2">17.50%</td>
+      <td className="px-4 py-2 rounded-r-2xl">{specialAllowance.toLocaleString()}</td>
+    </tr>
+    <tr className="bg-blue-300 font-semibold rounded-2xl overflow-hidden border">
+      <td className="px-4 py-2 rounded-l-2xl">Gross Earnings</td>
+      <td></td>
+      <td className="px-4 py-2 rounded-r-2xl">{monthlyCTC?.toLocaleString() || 0}</td>
+    </tr>
+  </tbody>
+</table>
+
       </div>
 
       {/* Submit Button */}

@@ -15,7 +15,7 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeCreated }) 
     number: "",
     gender_id: "", // ✅ using gender_id instead of string
     dateOfJoining: "",
-    designation: "",
+    designation_id: "",
     department_id: "",
     role_name: "staff",
     work_start: "",
@@ -24,6 +24,18 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeCreated }) 
 
   const [departments, setDepartments] = useState<{ id: string; department_name: string }[]>([]);
   const [genders, setGenders] = useState<{ id: string; type: string }[]>([]);
+  const [designations, setDesignations] = useState<{ id: string; designation: string }[]>([]);
+
+useEffect(() => {
+  const fetchDesignations = async () => {
+    const { data, error } = await supabase.from("designations").select("id, designation");
+    if (!error && data) {
+      setDesignations(data);
+    }
+  };
+  fetchDesignations();
+}, []);
+
 
   // ✅ Fetch departments for current admin’s company
   useEffect(() => {
@@ -140,7 +152,8 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeCreated }) 
         number: formData.number,
         gender_id: formData.gender_id, // ✅ send gender_id
         date_of_joining: formattedDate,
-        designation: formData.designation,
+        designation_id: formData.designation_id,
+        
         department_id: formData.department_id,
         company_id: companyId,
         role_name: formData.role_name,
@@ -181,7 +194,7 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeCreated }) 
           .insert([
             {
               company_id: companyId,
-              users_id: newUserId,
+              user_id: newUserId,
               work_start: timeToSeconds(formData.work_start),
               work_end: timeToSeconds(formData.work_end),
               created_at: new Date().toISOString(),
@@ -209,7 +222,7 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeCreated }) 
           number: "",
           gender_id: "", // ✅ reset to empty
           dateOfJoining: "",
-          designation: "",
+          designation_id: "",
           department_id: "",
           role_name: "staff",
           work_start: "",
@@ -222,7 +235,7 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeCreated }) 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded-md shadow-sm">
+    <form onSubmit={handleSubmit} className="bg-white p-6 ">
       <div className="space-y-6 pr-6">
         {/* Employee Name */}
         <div>
@@ -303,26 +316,54 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeCreated }) 
           </div>
         </div>
 
+        <div className="flex items-start space-x-2">
+  <input
+    id="isDirector"
+    type="checkbox"
+    className="mt-1 h-5 w-5 rounded-md border-2 border-blue-400 text-blue-600 focus:ring-2 focus:ring-blue-300 cursor-pointer"
+  />
+  <label htmlFor="isDirector" className="text-sm text-gray-700 cursor-pointer">
+    Employee is a director/person with substantial interest in the company.
+  </label>
+</div>
+
         {/* Gender & Mobile */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-2">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Gender <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="gender_id"
-              value={formData.gender_id}
-              onChange={handleChange}
-              className="w-3/4 px-3 py-2 border border-blue-400 rounded-full bg-white"
-            >
-              <option value="">Select Gender</option>
-              {genders.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.type}
-                </option>
-              ))}
-            </select>
-          </div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Gender <span className="text-red-500">*</span>
+  </label>
+  <div className="relative w-3/4">
+    <select
+      name="gender_id"
+      value={formData.gender_id}
+      onChange={handleChange}
+      className="w-full appearance-none px-3 py-2 border border-blue-400 rounded-full bg-white pr-10"
+    >
+      <option value="">Select Gender</option>
+      {genders.map((g) => (
+        <option key={g.id} value={g.id}>
+          {g.type}
+        </option>
+      ))}
+    </select>
+    {/* Dropdown Arrow with Circle */}
+    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+      <div className="w-6 h-6 rounded-full border border-blue-400 flex items-center justify-center bg-blue-50">
+        <svg
+          className="w-3 h-3 text-blue-500"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Mobile Number <span className="text-red-500">*</span>
@@ -341,38 +382,61 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeCreated }) 
         {/* Designation & Department */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-2">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Designation
-            </label>
-            <input
-              type="text"
-              name="designation"
-              placeholder="e.g. Software Engineer"
-              value={formData.designation}
-              onChange={handleChange}
-              className="w-3/4 px-3 py-2 border border-blue-400 rounded-full"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Department <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="department_id"
-              value={formData.department_id}
-              onChange={handleChange}
-              required
-              className="w-3/4 px-3 py-2 border border-blue-400 rounded-full bg-white"
-            >
-              <option value="">Select Department</option>
-              {departments.map((dept) => (
-                <option key={dept.id} value={dept.id}>
-                  {dept.department_name}
-                </option>
-              ))}
-            </select>
+           <label className="block text-sm font-medium text-gray-700 mb-2">
+  Designation <span className="text-red-500">*</span>
+</label>
+<div className="relative w-3/4">
+  <select
+    name="designation_id"
+    value={formData.designation_id}
+    onChange={handleChange}
+    className="w-full appearance-none px-3 py-2 border border-blue-400 rounded-full bg-white pr-10"
+  >
+    <option value="">Select Designation</option>
+    {designations.map((d) => (
+      <option key={d.id} value={d.id}>
+        {d.designation}
+      </option>
+    ))}
+  </select>
+</div>
 
           </div>
+          <div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Department <span className="text-red-500">*</span>
+  </label>
+  <div className="relative w-3/4">
+    <select
+      name="department_id"
+      value={formData.department_id}
+      onChange={handleChange}
+      required
+      className="w-full appearance-none px-3 py-2 border border-blue-400 rounded-full bg-white pr-10"
+    >
+      <option value="">Select Department</option>
+      {departments.map((dept) => (
+        <option key={dept.id} value={dept.id}>
+          {dept.department_name}
+        </option>
+      ))}
+    </select>
+    {/* Dropdown Arrow with Circle */}
+    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+      <div className="w-6 h-6 rounded-full border border-blue-400 flex items-center justify-center bg-blue-50">
+        <svg
+          className="w-3 h-3 text-blue-500"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
         </div>
 
         {/* Role Selection */}
@@ -381,14 +445,19 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeCreated }) 
             Role <span className="text-red-500">*</span>
           </label>
           <select
-            name="role_name"
-            value={formData.role_name}
-            onChange={handleChange}
-            className="w-3/4 px-3 py-2 border border-blue-400 rounded-full bg-white"
-          >
-            <option value="staff">Staff</option>
-            <option value="admin">Admin</option>
-          </select>
+  name="role_name"
+  value={formData.role_name}
+  onChange={handleChange}
+  className="w-3/4 px-3 py-2 border border-blue-400 rounded-full bg-white appearance-none pr-10
+             [background-image:linear-gradient(45deg,transparent 50%,#2563eb 50%),linear-gradient(135deg,#2563eb 50%,transparent 50%)]
+             [background-position:calc(100%-20px) calc(1em+2px),calc(100%-15px) calc(1em+2px)]
+             [background-size:5px 5px,5px 5px]
+             [background-repeat:no-repeat]"
+>
+  <option value="staff">Staff</option>
+  <option value="admin">Admin</option>
+</select>
+
         </div>
 
         {/* Work Hours */}
@@ -418,6 +487,22 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeCreated }) 
             />
           </div>
         </div>
+
+        {/* Enable Portal Access Checkbox */}
+<div className="flex items-start space-x-2 mt-3">
+  <input
+    id="portalAccess"
+    type="checkbox"
+    className="mt-1 h-5 w-5 rounded-md border-2 border-blue-400 text-blue-600 focus:ring-2 focus:ring-blue-300 cursor-pointer"
+  />
+  <label htmlFor="portalAccess" className="text-sm text-gray-700 cursor-pointer">
+    Enable Portal Access <br />
+    <span className="text-xs text-gray-500">
+      The employee will be able to view payslips, submit their IT declaration,
+      create reimbursement claims and so on.
+    </span>
+  </label>
+</div>
 
         {/* Submit */}
         <div className="pt-4">

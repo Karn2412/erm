@@ -1,56 +1,28 @@
-import React, { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
-import RequestsModal from './attendencemodal/RequestsModal';
-import { supabase } from '../../supabaseClient';
+import React, { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import RequestsModal from "./attendencemodal/RequestsModal";
+import { supabase } from "../../supabaseClient";
 
 interface EmployeeAttendanceHeaderProps {
-  viewMode: 'weekly' | 'monthly';
-  setViewMode: Dispatch<SetStateAction<'weekly' | 'monthly'>>;
+  viewMode: "weekly" | "monthly";
+  setViewMode: Dispatch<SetStateAction<"weekly" | "monthly">>;
   showRequestsButton?: boolean;
-  userId: string | number; // User ID to fetch name & department
-  employeeName: string
-  department: string
-  
+  userId: string | number;
+  employeeName: string;
+  department: string;
+  designation: string;
 }
 
 const EmployeeAttendanceHeader: React.FC<EmployeeAttendanceHeaderProps> = ({
   viewMode,
   setViewMode,
   showRequestsButton = false,
-  userId, 
+  userId,
+  employeeName,
+  department,
+  designation,
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
-  const [employeeName, setEmployeeName] = useState('');
-  const [department, setDepartment] = useState('');
-
-  // Fetch employee name and department
-  useEffect(() => {
-    if (!userId) return;
-
-    const fetchUserDetails = async () => {
-      const { data, error } = await supabase
-        .from('users')
-        .select('name, department_id')
-        .eq('id', userId)
-        .single();
-
-      if (!error && data) {
-        setEmployeeName(data.name);
-
-        if (data.department_id) {
-          const { data: deptData } = await supabase
-            .from('departments')
-            .select('department_name')
-            .eq('id', data.department_id)
-            .single();
-
-          if (deptData) setDepartment(deptData.department_name);
-        }
-      }
-    };
-
-    fetchUserDetails();
-  }, [userId]);
 
   // Fetch pending requests count
   useEffect(() => {
@@ -78,34 +50,54 @@ const EmployeeAttendanceHeader: React.FC<EmployeeAttendanceHeaderProps> = ({
         <div className="flex items-center space-x-6">
           <div className="flex space-x-0">
             <button
-              className={`px-3 py-1 text-xs rounded-lg ${viewMode === 'weekly' ? 'bg-gray-300 text-black' : 'bg-gray-100 text-gray-500'}`}
-              onClick={() => setViewMode('weekly')}
+              className={`px-3 py-1 text-xs rounded-lg ${
+                viewMode === "weekly"
+                  ? "bg-gray-300 text-black"
+                  : "bg-gray-100 text-gray-500"
+              }`}
+              onClick={() => setViewMode("weekly")}
             >
               Weekly
             </button>
             <button
-              className={`px-3 py-1 text-xs rounded-lg ${viewMode === 'monthly' ? 'bg-gray-300 text-black' : 'bg-gray-100 text-gray-500'}`}
-              onClick={() => setViewMode('monthly')}
+              className={`px-3 py-1 text-xs rounded-lg ${
+                viewMode === "monthly"
+                  ? "bg-gray-300 text-black"
+                  : "bg-gray-100 text-gray-500"
+              }`}
+              onClick={() => setViewMode("monthly")}
             >
               Monthly
             </button>
           </div>
 
           <div className="flex items-center space-x-4 text-xs">
-            <div className="flex items-center"><span className="w-3 h-3 bg-green-500 rounded-full mr-1"></span>Checked In</div>
-            <div className="flex items-center"><span className="w-3 h-3 bg-red-500 rounded-full mr-1"></span>Absent</div>
-            <div className="flex items-center"><span className="w-3 h-3 bg-orange-400 rounded-full mr-1"></span>Regularization</div>
-            <div className="flex items-center"><span className="w-3 h-3 bg-blue-500 rounded-full mr-1"></span>Approved Off</div>
+            <div className="flex items-center">
+              <span className="w-3 h-3 bg-green-500 rounded-full mr-1"></span>
+              Checked In
+            </div>
+            <div className="flex items-center">
+              <span className="w-3 h-3 bg-red-500 rounded-full mr-1"></span>
+              Absent
+            </div>
+            <div className="flex items-center">
+              <span className="w-3 h-3 bg-orange-400 rounded-full mr-1"></span>
+              Regularization
+            </div>
+            <div className="flex items-center">
+              <span className="w-3 h-3 bg-blue-500 rounded-full mr-1"></span>
+              Approved Off
+            </div>
           </div>
         </div>
       </div>
 
       {/* Info Row */}
-      <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+      <div className="bg-gray-100 p-4 rounded-lg mb-4">
         <div className="grid grid-cols-4 gap-4 mb-2 items-center">
           <p className="text-xs text-gray-600">Employee Name</p>
           <p className="text-xs text-gray-600">Department</p>
-          <p></p>
+          <p className="text-xs text-gray-600">Designation</p>
 
           {/* Requests Button */}
           <div className="flex justify-end">
@@ -136,11 +128,18 @@ const EmployeeAttendanceHeader: React.FC<EmployeeAttendanceHeaderProps> = ({
             value={department}
             className="border border-blue-300 rounded-full px-4 py-2 text-sm text-gray-700"
           />
-          <div></div>
+          <input
+            type="text"
+            readOnly
+            value={designation}
+            className="border border-blue-300 rounded-full px-4 py-2 text-sm text-gray-700"
+          />
         </div>
       </div>
 
-      {showModal && <RequestsModal onClose={() => setShowModal(false)} userId={String(userId)} />}
+      {showModal && (
+        <RequestsModal onClose={() => setShowModal(false)} userId={String(userId)} />
+      )}
     </div>
   );
 };

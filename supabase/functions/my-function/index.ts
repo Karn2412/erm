@@ -63,7 +63,12 @@ serve(async (req) => {
 
     // ✅ Parse Request Body
     const body = await req.json();
-    const { email, password, name, number, role_name, gender_id, department_id } = body;
+    const { email, password, name, number, role_name, gender_id, department_id, designation_id } = body;
+
+    if (!designation_id) {
+  return withCors(new Response(JSON.stringify({ error: "designation_id is required" }), { status: 400 }));
+}
+
 
     // Validate fields
     if (!email || !password || !name || !number) {
@@ -101,6 +106,7 @@ serve(async (req) => {
         company_id: adminCompanyId,
         gender_id,
         department_id,
+        designation_id,
       },
     ]);
 

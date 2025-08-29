@@ -10,7 +10,7 @@ type Props = {
 const RegularizationRequestModal: React.FC<Props> = ({ onClose }) => {
   const { userData } = useUser();
   console.log("User Data:", userData);
-
+ 
 
   const [formData, setFormData] = useState({
     day: "",
@@ -39,10 +39,23 @@ const RegularizationRequestModal: React.FC<Props> = ({ onClose }) => {
   }
   
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+) => {
+  const { name, value } = e.target;
+
+  if (name === "date") {
+    const selectedDate = new Date(value);
+    const dayName = selectedDate.toLocaleDateString("en-US", { weekday: "long" });
+    setFormData({
+      ...formData,
+      date: value,
+      day: dayName, // auto-fill day
+    });
+  } else {
+    setFormData({ ...formData, [name]: value });
+  }
+};
+
 
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -118,7 +131,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             {/* Day */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Day <span className="text-red-500">*</span>
+                Day 
               </label>
               <input
                 name="day"
@@ -190,7 +203,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                className="flex items-center gap-2 bg-yellow-500 text-white px-6 py-2 rounded-xl hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-blue-300"
               >
                 {loading ? (
                   "Submitting..."

@@ -1,14 +1,32 @@
 import React, { useEffect, useState } from "react";
+import { HiUsers, HiUserPlus, HiUserMinus  } from "react-icons/hi2";
 import { supabase } from "../../supabaseClient"; // adjust import path
+import { HiTrendingDown } from "react-icons/hi";
 
 interface Props {
   title: string;
   color: string;
-  queryKey: "totalEmployees" | "newJoinees" | "attritionRate";
+  queryKey: "totalEmployees" | "newJoinees" | "attritionRate" | "exists";
 }
 
 const OverviewCard: React.FC<Props> = ({ title, color, queryKey }) => {
   const [value, setValue] = useState<string>("0");
+
+  // Function to get the appropriate icon based on queryKey
+  const getIcon = () => {
+    switch (queryKey) {
+      case "totalEmployees":
+        return <HiUsers className="mt-2 w-6 h-6 text-gray-600" />;
+      case "newJoinees":
+        return <HiUserPlus className="mt-2 w-6 h-6 text-gray-600" />;
+      case "attritionRate":
+        return <HiTrendingDown className="mt-2 w-6 h-6 text-gray-600" />;
+      case "exists":
+        return <HiUserMinus className="mt-2 w-6 h-6 text-gray-600" />;
+      default:
+        return <HiUsers className="mt-2 w-6 h-6 text-gray-600" />;
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,7 +69,6 @@ const OverviewCard: React.FC<Props> = ({ title, color, queryKey }) => {
         if (queryKey === "totalEmployees") result = stats.total_employees ?? 0;
         if (queryKey === "newJoinees") result = stats.new_joinees ?? 0;
         if (queryKey === "attritionRate") result = stats.attrition_rate ?? "0%";
-
         setValue(result.toString());
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -63,9 +80,14 @@ const OverviewCard: React.FC<Props> = ({ title, color, queryKey }) => {
   }, [queryKey]);
 
   return (
-    <div className={`p-4 rounded shadow-sm ${color}`}>
-      <p className="text-sm text-gray-600">{title}</p>
-      <div className="text-xl font-bold">{value}</div>
+    <div className={`p-4 rounded-2xl shadow-sm ${color}`}>
+      <div className="flex items-start  gap-3">
+        {getIcon()}
+        <div className="flex flex-col">
+          <p className="text-sm text-gray-600">{title}</p>
+          <div className="text-xl  font-bold">{value}</div>
+        </div>
+      </div>
     </div>
   );
 };

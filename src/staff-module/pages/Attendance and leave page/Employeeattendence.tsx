@@ -44,7 +44,10 @@ const EmployeeAttendancePage = () => {
   const [selectedYear, setSelectedYear] = useState<number>(today.getFullYear())
   const [regularizeDate, setRegularizeDate] = useState<string | null>(null);
   console.log(regularizeDate);
-
+  console.log(setSelectedMonth);
+  console.log(setSelectedYear);
+  
+  
   //
   const getColorBorder = (status: string) => {
     switch (status) {
@@ -208,13 +211,13 @@ const EmployeeAttendancePage = () => {
   if (loading) return <div>Loading attendance...</div>;
 
   return (
-    <div className="flex bg-blue-50 min-h-screen">
+    <div className="flex bg-white min-h-screen">
       <div className="flex flex-col w-full">
         <div className="p-6 space-y-6">
           {/* Top Cards */}
           <div className="flex gap-4 items-stretch">
   <div className="w-1/2">
-    <div className="h-full bg-white shadow-md rounded-lg">
+    <div className="h-full bg-gray-50  rounded-lg">
       <TimeTrackerCard />
     </div>
   </div>
@@ -227,23 +230,42 @@ const EmployeeAttendancePage = () => {
 
 
           {/* Attendance Panel */}
-          <div className="bg-white/60 backdrop-blur-md rounded-2xl shadow p-6">
+          <div className="bg-white backdrop-blur-md rounded-2xl  p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-semibold text-gray-900">Employee Attendance</h2>
+  <h2 className="text-lg font-semibold text-gray-900">Employee Attendance</h2>
 
-              <div className="flex items-center gap-4">
-                <div className="flex rounded-full bg-white shadow-inner">
-                  <button
-                    onClick={() => setViewMode('weekly')}
-                    className={`px-4 py-1 rounded-l-full text-sm font-medium transition ${viewMode === 'weekly' ? 'bg-gray-300 text-gray-900' : 'text-gray-400'}`}
-                  >Weekly</button>
-                  <button
-                    onClick={() => setViewMode('monthly')}
-                    className={`px-4 py-1 rounded-r-full text-sm font-medium transition ${viewMode === 'monthly' ? 'bg-gray-300 text-gray-900' : 'text-gray-400'}`}
-                  >Monthly</button>
-                </div>
+  <div className="flex items-center gap-6">
+    {/* Weekly/Monthly Toggle */}
+    <div className="flex rounded-full bg-gray-50">
+      <button
+        onClick={() => setViewMode('weekly')}
+        className={`px-4 py-1 rounded-l-lg text-sm font-medium transition ${viewMode === 'weekly' ? 'bg-gray-300 text-gray-900' : 'text-gray-400'}`}
+      >
+        Weekly
+      </button>
+      <button
+        onClick={() => setViewMode('monthly')}
+        className={`px-4 py-1 rounded-r-lg text-sm font-medium transition ${viewMode === 'monthly' ? 'bg-gray-300 text-gray-900' : 'text-gray-400'}`}
+      >
+        Monthly
+      </button>
+    </div>
 
-                <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="rounded px-2 py-1 border">
+    {/* Legend */}
+    <div className="flex items-center gap-x-4 bg-gray-50 rounded-2xl px-4 py-1 text-xs">
+      {[
+        { color: "green-500", label: "Checked In" },
+        { color: "red-500", label: "Absent" },
+        { color: "yellow-500", label: "Regularization" },
+        { color: "blue-500", label: "Approved Off" },
+      ].map(({ color, label }, idx) => (
+        <div key={idx} className="flex items-center gap-x-2">
+          <span className={`w-3 h-3 rounded-full bg-${color}`}></span>
+          <p>{label}</p>
+        </div>
+      ))}
+    </div>
+    {/* <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="rounded px-2 py-1 border">
                   {Array.from({ length: 12 }, (_, i) => (
                     <option key={i} value={i}>
                       {format(new Date(2025, i, 1), 'MMMM')}
@@ -255,11 +277,12 @@ const EmployeeAttendancePage = () => {
                   {[2023, 2024, 2025, 2026].map((year) => (
                     <option key={year}>{year}</option>
                   ))}
-                </select>
-              </div>
-            </div>
+                </select> */}
+  </div>
+</div>
 
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+
+            <div className="bg-white rounded-xl  p-4">
               {viewMode === 'weekly' ? (
                 <AttendanceWeeklyTable
                   data={attendanceData}
@@ -267,7 +290,8 @@ const EmployeeAttendancePage = () => {
                 />
               ) : (
                 <>
-                  <div className="grid grid-cols-7 text-center text-sm font-semibold text-gray-600 mb-4">
+                <div className='p-6  bg-gray-50 rounded-2xl '>
+                    <div className="grid grid-cols-7 text-center text-sm font-semibold  text-gray-500 mb-4">
                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
                       <div key={day}>{day}</div>
                     ))}
@@ -308,13 +332,14 @@ const EmployeeAttendancePage = () => {
                       return calendarDays
                     })()}
                   </div>
+                </div>
                 </>
               )}
             </div>
           </div>
 
           {/* Requests Table Panel */}
-          <div className="bg-white/60 backdrop-blur-md rounded-2xl shadow p-6 mt-6">
+          <div className="bg-white backdrop-blur-md rounded-2xl  p-6 mt-6">
   <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Requests</h2>
 
   <div className="overflow-x-auto">

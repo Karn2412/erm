@@ -76,7 +76,7 @@ const ReimbursementRequestCard: React.FC = () => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-lg relative">
+    <div className="bg-gray-50 p-6 rounded-2xl  relative">
       {/* Top-right time toggle */}
       <div className="absolute top-4 right-4 flex space-x-2">
         {["MONTH", "YEAR", "ALL"].map((f) => (
@@ -92,7 +92,7 @@ const ReimbursementRequestCard: React.FC = () => {
         ))}
       </div>
 
-      <h2 className="text-xl font-semibold text-gray-800 mb-6 ">Reimbursement Requests</h2>
+      <h2 className=" font-semibold text-gray-800 mb-4 ">Reimbursement Requests</h2>
 
       {/* Status buttons */}
       <div className="flex justify-center space-x-4 mb-6">

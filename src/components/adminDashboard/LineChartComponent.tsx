@@ -64,15 +64,15 @@ const LineChartComponent: React.FC = () => {
         <AreaChart data={data}>
           <defs>
             <linearGradient id="colorPayroll" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#00bcd4" stopOpacity={0.6} />
-              <stop offset="95%" stopColor="#00bcd4" stopOpacity={0} />
+              <stop offset="5%" stopColor="#00bcd4" stopOpacity={0.2} />
+              <stop offset="15%" stopColor="#00bcd4" stopOpacity={0} />
             </linearGradient>
           </defs>
 
           <CartesianGrid stroke="#888" strokeDasharray="4 4" vertical={false} />
 
-          <XAxis dataKey="month" />
-          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 13 }} />
+          <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize:10 }} />
+          <YAxis axisLine={false} tickLine={false} tick={{ fontSize:10 }} />
 
           <Tooltip />
 

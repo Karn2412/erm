@@ -95,8 +95,8 @@ const AttendanceChartCard: React.FC<Props> = () => {
   ];
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-lg">
-      <h3 className="text-lg font-medium mb-4 text-gray-800">
+    <div className="bg-gray-50 p-6 rounded-2xl ">
+      <h3 className=" font-semibold mb-4 text-gray-800">
         Attendance Distribution
       </h3>
 

@@ -27,8 +27,8 @@ const SectionStepper: React.FC<Props> = ({
         currentSection > 1
           ? 'Completed'
           : currentSection === 1
-          ? 'In Progress'
-          : 'Pending',
+            ? 'In Progress'
+            : 'Pending',
     },
     {
       number: 2,
@@ -37,8 +37,8 @@ const SectionStepper: React.FC<Props> = ({
         currentSection > 2
           ? 'Completed'
           : currentSection === 2
-          ? 'In Progress'
-          : 'Pending',
+            ? 'In Progress'
+            : 'Pending',
     },
     {
       number: 3,
@@ -47,14 +47,14 @@ const SectionStepper: React.FC<Props> = ({
         currentSection === 3
           ? 'In Progress'
           : currentSection > 3
-          ? 'Completed'
-          : 'Pending',
+            ? 'Completed'
+            : 'Pending',
     },
   ];
 
   // circle background & text color
   const circleClasses = (status: StepStatus) => {
-    if (status === 'Completed') return 'bg-green-500 border-green-500 text-white';
+    if (status === 'Completed') return 'bg-green-500 border-green-500  text-white';
     if (status === 'In Progress') return 'bg-blue-500 border-blue-500 text-white';
     return 'bg-gray-200 border-gray-200 text-gray-500';
   };
@@ -88,18 +88,19 @@ const SectionStepper: React.FC<Props> = ({
                 >
                   {step.number}
                 </div>
-                <span className="text-sm mt-2 text-gray-700">{step.label}</span>
-                <span
-                  className={`text-xs  ${
-                    step.status === 'Completed'
-                      ? 'text-green-600'
-                      : step.status === 'In Progress'
-                      ? 'text-blue-600'
-                      : 'text-gray-500'
-                  }`}
-                >
-                  {step.status}
-                </span>
+                <div className="flex flex-col items-start text-left mt-2">
+                  <span className="text-sm text-gray-700">{step.label}</span>
+                  <span
+                    className={`text-xs mt-1 px-2 py-1 rounded-lg ${step.status === "Completed"
+                        ? "text-green-500 bg-green-50"
+                        : step.status === "In Progress"
+                          ? "text-blue-600 bg-gray-50"
+                          : "text-gray-500 bg-gray-50"
+                      }`}
+                  >
+                    {step.status}
+                  </span>
+                </div>
               </div>
 
               {!isLast && (

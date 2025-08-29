@@ -40,7 +40,7 @@ const App: React.FC = () => {
               <Route path="/attendance-detail/:userId" element={<ProtectedRoute><EmployeeAttendanceDetailPage /></ProtectedRoute>} />
               <Route path="/payruns" element={<ProtectedRoute><PayRunsPageAdmin /></ProtectedRoute>} />
               <Route path="/reimbursements" element={<ProtectedRoute><ReimbursementsPage /></ProtectedRoute>} />
-              <Route path="/reimbursements/:employeeId" element={<ProtectedRoute><SubmissionDetailsPage /></ProtectedRoute>} />
+              <Route path="/reimbursements/:id" element={<ProtectedRoute><SubmissionDetailsPage /></ProtectedRoute>} />
               <Route path="/templates" element={<ProtectedRoute><TemplatesPage /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><SettingsDepartmentsPage /></ProtectedRoute>} />
 

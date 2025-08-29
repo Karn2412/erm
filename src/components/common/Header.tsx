@@ -1,4 +1,4 @@
-import  { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FaSearch, FaBell, FaTimes } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../supabaseClient";
@@ -20,9 +20,7 @@ const Header = () => {
   // Logout
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Logout error:", error.message);
-    } else {
+    if (!error) {
       localStorage.removeItem("userData");
       navigate("/login");
     }
@@ -40,139 +38,129 @@ const Header = () => {
   }, []);
 
   // Fetch requests
-// 🔹 Fetch requests for admin/staff
-useEffect(() => {
-  if (!userData?.company_id) return;
+  useEffect(() => {
+    if (!userData?.company_id) return;
 
-  const fetchRequests = async () => {
-    try {
-      let data, error;
-      console.log(error);
-      
+    const fetchRequests = async () => {
+      try {
+        let data: any[] = [];
 
-      if (userData.role === "Admin") {
-        // Admin: fetch all PENDING requests from attendance_requests and reimbursements
-        const { data: attendanceData, error: attendanceError } = await supabase
-          .from("attendance_requests")
-          .select(`
-            id,
-            user_id,
-            request_type,
-            status,
-            reason,
-            created_at
-          `)
-          .eq("company_id", userData.company_id)
-          .eq("status", "PENDING")
-          .order("created_at", { ascending: false });
+        if (userData.role === "admin") {
+          // ✅ Attendance requests
+          const { data: attendanceData, error: attErr } = await supabase
+            .from("attendance_requests")
+            .select("id,user_id,request_type,status,reason,created_at")
+            .eq("company_id", userData.company_id)
+            .eq("status", "PENDING")
+            .order("created_at", { ascending: false });
 
-        if (attendanceError) throw attendanceError;
+          console.log("Attendance Data:", attendanceData);
 
-        const { data: reimbursementData, error: reimbursementError } = await supabase
-          .from("reimbursements")
-          .select(`
-            id,
-            user_id,
-            category as request_type,
-            status,
-            description,
-            expense_date as created_at
-          `)
-          .eq("company_id", userData.company_id)
-          .eq("status", "PENDING")
-          .order("created_at", { ascending: false });
+          if (attErr) console.error("Attendance fetch error", attErr);
 
-        if (reimbursementError) throw reimbursementError;
+          // ✅ Reimbursements (⚡ no aliasing in query, we alias in JS)
+          const { data: reimbursementData, error: reimbErr } = await supabase
+            .from("reimbursements")
+            .select("id,user_id,category,status,description,expense_date,company_id")
+            .eq("company_id", userData.company_id)
+            .eq("status", "PENDING")
+            .order("expense_date", { ascending: false });
 
-        data = [
-          ...(attendanceData || []).map((r: Record<string, any>) => ({
-            ...r,
-            request_source: "ATTENDANCE",
-            detail: r.reason,
-          })),
-          ...(reimbursementData || []).map((r: Record<string, any>) => ({
-            ...r,
-            request_source: "REIMBURSEMENT",
-            detail: r.description,
-            
+          console.log("Reimbursement Data:", reimbursementData);
 
-          })),
-        ];
-       
-      } else {
-        // Staff: show only APPROVED or REJECTED requests
-        ({ data, error } = await supabase
-          .from("attendance_requests")
-          .select(`
-            id,
-            request_type,
-            status,
-            reason,
-            created_at
-          `)
-          .eq("user_id", userData.id)
-          .in("status", ["APPROVED", "REJECTED"])
-          .order("created_at", { ascending: false }));
+          if (reimbErr) console.error("Reimbursement fetch error", reimbErr);
+
+          // Merge + normalize
+          data = [
+            ...(attendanceData ?? []).map((r: any) => ({
+              ...r,
+              request_source: "ATTENDANCE",
+              detail: r.reason || "No details",
+            })),
+            ...(reimbursementData ?? []).map((r: any) => ({
+              ...r,
+              request_source: "REIMBURSEMENT",
+              request_type: r.category,     // alias here
+              created_at: r.expense_date,   // alias here
+              detail: r.description || "No details",
+            })),
+          ];
+        } else {
+          // ✅ Staff (self view)
+          const { data: staffData, error: staffErr } = await supabase
+            .from("attendance_requests")
+            .select("id,request_type,status,reason,created_at")
+            .eq("user_id", userData.id)
+            .in("status", ["APPROVED", "REJECTED"])
+            .order("created_at", { ascending: false });
+
+          if (staffErr) console.error("Staff fetch error", staffErr);
+
+          data = staffData ?? [];
+        }
+
+        // ✅ Normalize for UI
+        const normalized = (data || []).map((r: any) => ({
+          id: r.id,
+          type: r.request_type,
+          status: r.status,
+          created_at: r.created_at,
+          detail: r.detail || r.reason || r.description || "No details",
+          requestedBy: userData.role === "admin" ? r.user_id : userData.name,
+          navigateTo:
+            r.request_source === "REIMBURSEMENT"
+              ? `/reimbursements/${r.user_id}`
+              : `/attendance-detail/${r.user_id}`,
+        }));
+
+        setRequests(normalized);
+      } catch (err) {
+        console.error("Error fetching requests:", err);
       }
+    };
 
-      const normalized = (data || []).map((r: any) => ({
-        id: r.id,
-        type: r.request_type,
-        status: r.status,
-        created_at: r.created_at,
-        detail: r.detail || r.reason || r.description || "No details",
-        requestedBy: userData.role === "Admin" ? r.user_id : userData.name,
-        navigateTo:
-          r.request_source === "REIMBURSEMENT"
-            ? `/reimbursements/${r.user_id}`
-            : `/attendance-detail/${r.user_id}`,
-      }));
-
-      setRequests(normalized);
-    } catch (err) {
-      console.error("Error fetching requests:", err);
-    }
-  };
-
-  fetchRequests();
-}, [userData?.company_id, userData?.id, userData?.role]);
+    fetchRequests();
+  }, [userData?.company_id, userData?.id, userData?.role]);
 
 
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 border-b border-gray-200 space-y-4 sm:space-y-0">
-      {/* Title */}
-      <h3 className="text-lg font-semibold capitalize">
-        {location.pathname === "/employees/add"
-          ? "Employee"
-          : location.pathname.includes("employees")
-          ? "Employees"
-          : location.pathname.includes("attendance")
-          ? "Attendance And Leave"
-          : location.pathname.includes("pay")
-          ? "Pay Runs"
-          : location.pathname.includes("reimbursements")
-          ? "Reimbursements"
-          : location.pathname.includes("templates")
-          ? "Templates"
-          : location.pathname.includes("settings")
-          ? "Settings"
-          : location.pathname.includes("personal-details")
-          ? "Personal Details"
-          : location.pathname.includes("pay-slips")
-          ? "Pay Slips"
-          : "Dashboard"}
-      </h3>
+    <div className="flex justify-between items-center bg-[#f8f8f8] px-6 py-3 ">
+      {/* Left: Breadcrumb / Page Title */}
+      <div className="flex items-center space-x-2 text-sm">
+
+        <span className="text-gray-800 text-lg font-semibold mb-4">
+          {location.pathname === "/employees/add"
+            ? "Employee"
+            : location.pathname.includes("employees")
+              ? "Employees"
+              : location.pathname.includes("attendance")
+                ? "Attendance And Leave"
+                : location.pathname.includes("pay")
+                  ? "Pay Runs"
+                  : location.pathname.includes("reimbursements")
+                    ? "Reimbursements"
+                    : location.pathname.includes("templates")
+                      ? "Templates"
+                      : location.pathname.includes("settings")
+                        ? "Settings"
+                        : location.pathname.includes("personal-details")
+                          ? "Personal Details"
+                          : location.pathname.includes("pay-slips")
+                            ? "Pay Slips"
+                            : "Dashboard"}
+        </span>
+      </div>
 
       {/* Right Section */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center sm:space-x-4 space-y-4 sm:space-y-0 w-full sm:w-auto">
+      <div className="flex items-center space-x-5">
         {/* Search Bar */}
         {!shouldHideSearchBar && (
-          <div className="flex items-center bg-gray-100 px-3 py-2 rounded w-full sm:w-auto">
-            <FaSearch className="text-gray-500 mr-2" />
+          <div className="flex items-center bg-white shadow-sm rounded-full px-3 py-2 w-[230px]">
+            <FaSearch className="text-[#f97366] mr-2 text-sm" />
             <input
               type="text"
               placeholder="Search Category..."
-              className="bg-transparent outline-none w-full"
+              className="bg-transparent outline-none text-sm w-full text-gray-600 placeholder-gray-400"
             />
           </div>
         )}
@@ -180,29 +168,34 @@ useEffect(() => {
         {/* Notification Icon */}
         <div className="relative">
           <FaBell
-            className="text-gray-600 cursor-pointer"
+            className="text-gray-600 cursor-pointer text-lg"
             onClick={() => setShowNotifModal(true)}
           />
+
+          {/* 🔴 Red dot when requests exist */}
+          {userData.role === "admin" && requests.length > 0 && (
+            <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-600"></span>
+          )}
         </div>
 
-        {/* Profile Info with Dropdown */}
+
+        {/* Profile */}
         <div className="relative" ref={dropdownRef}>
           <div
-            className="flex items-center space-x-2 cursor-pointer"
+            className="flex items-center space-x-2 cursor-pointer bg-white px-3 py-1 rounded-full shadow-sm"
             onClick={() => setDropdownOpen((prev) => !prev)}
           >
             <img
               src="https://www.pngplay.com/wp-content/uploads/12/User-Avatar-Profile-Transparent-Free-PNG-Clip-Art.png"
               alt="Profile"
-              className="rounded-full w-[30px] h-[30px]"
+              className="rounded-full w-[32px] h-[32px]"
             />
-            <div>
-              <p className="text-sm font-medium">{userData?.name || "Loading..."}</p>
+            <div className="text-sm">
+              <p className="font-medium text-gray-800">{userData?.name || "Loading..."}</p>
               <p className="text-xs text-gray-500">{userData?.role || "User"}</p>
             </div>
           </div>
 
-          {/* Dropdown */}
           {dropdownOpen && (
             <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded shadow-md z-10">
               <button
@@ -216,7 +209,7 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* 🔹 Notification Modal */}
+      {/* Notification Modal */}
       {showNotifModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-start pt-20 z-50" style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
           <div className="bg-white rounded-lg shadow-lg w-[400px] max-h-[500px] overflow-y-auto">
@@ -251,11 +244,10 @@ useEffect(() => {
 
                     {userData.role !== "Admin" && (
                       <span
-                        className={`px-2 py-1 text-xs rounded-full font-semibold ${
-                          req.status === "APPROVED"
+                        className={`px-2 py-1 text-xs rounded-full font-semibold ${req.status === "APPROVED"
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
-                        }`}
+                          }`}
                       >
                         {req.status}
                       </span>

@@ -87,9 +87,9 @@ const AttendanceWeeklyTable: React.FC<AttendanceWeeklyTableProps> = ({ data, onR
   });
 
   return (
-    <div className="overflow-auto bg-white rounded-2xl shadow p-6">
+    <div className="overflow-auto bg-gray-50 rounded-2xl p-6">
       <div className="rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm border-separate border-spacing-y-3">
           <thead className="bg-gray-50 text-gray-600 text-left">
             <tr>
               <th className="px-4 py-3">Day</th>
@@ -104,7 +104,7 @@ const AttendanceWeeklyTable: React.FC<AttendanceWeeklyTableProps> = ({ data, onR
             {weekData.map((row, idx) => (
               <tr
                 key={idx}
-                className={`${idx % 2 === 0 ? 'bg-blue-50' : 'bg-white'} hover:bg-blue-100 transition duration-200`}
+                className={`${idx % 2 === 0 ? 'bg-blue-50' : 'bg-violet-50'} hover:bg-blue-100 transition duration-200`}
               >
                 <td className="px-4 py-3 rounded-l-xl">{row.day}</td>
                 <td className="px-4 py-3">{row.date}</td>

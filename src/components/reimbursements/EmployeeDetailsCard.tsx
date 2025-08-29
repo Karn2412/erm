@@ -1,44 +1,51 @@
 import React from 'react';
 
-
 interface EmployeeDetailsCardProps {
   name: string;
- 
+  department: string;
+  designation: string;
   avatar: string;
 }
 
 const EmployeeDetailsCard: React.FC<EmployeeDetailsCardProps> = ({
   name,
-  
+  department,
+  designation,
   avatar,
 }) => {
   return (
-    <div className="bg-white shadow-md rounded-xl p-5 mb-4 border border-gray-200">
-      {/* Top row: Avatar + Name + Role */}
-      <div className="flex items-center space-x-4 mb-4">
-        <img
-          src={avatar}
-          alt={name}
-          className="w-14 h-14 rounded-full object-cover border-2 border-indigo-400"
-        />
+    <div className="bg-gray-50 rounded-xl p-5 mb-4 ">
+      <div className="grid grid-cols-3 gap-6">
+        {/* Employee Name */}
         <div>
-          <p className="text-lg font-semibold text-gray-800">{name}</p>
-          
+          <label className="block text-sm text-gray-600 mb-1">
+            Employee Name
+          </label>
+          <div className="flex items-center space-x-2 border border-blue-300 rounded-full px-3 py-2 bg-white">
+            <img
+              src={avatar}
+              alt={name}
+              className="w-8 h-8 rounded-full object-cover"
+            />
+            <span className="text-gray-800 font-medium">{name}</span>
+          </div>
         </div>
-      </div>
 
-      {/* Info Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
         {/* Department */}
-        {/* <div className="flex items-center space-x-2">
-          <FaBuilding className="text-indigo-500" />
-          <span className="font-medium">Department:</span>
-          <span>{department}</span>
-        </div> */}
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">Department</label>
+          <div className="border border-blue-300 rounded-full px-3 py-2 bg-white">
+            {department}
+          </div>
+        </div>
 
-        <div></div>
-
-        {/* Additional fields can go here */}
+        {/* Designation (blank for now) */}
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">Designation</label>
+          <div className="border border-blue-300 rounded-full px-3 py-2 bg-white">
+            {designation}
+          </div>
+        </div>
       </div>
     </div>
   );

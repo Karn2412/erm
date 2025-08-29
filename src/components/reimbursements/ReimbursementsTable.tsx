@@ -6,6 +6,8 @@ interface Employee {
   id: string;
   name: string;
   number: string;
+  department_name?: string | null; // department fetched from join
+  designation?: string | null; // designation fetched from join
 }
 
 interface Props {
@@ -21,57 +23,72 @@ const ReimbursementsTable: React.FC<Props> = ({ employees }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
-      <table className="min-w-full text-sm">
-        <thead>
-          <tr className="text-gray-500 bg-gray-100 text-left rounded-lg">
-            <th className="py-3 px-4 w-1/5">Sl no</th>
-            <th className="py-3 px-4 w-1/5">Name</th>
-            <th className="py-3 px-4 w-1/5">Phone</th>
-            <th className="py-3 px-4 w-1/5">Submissions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {employees.map((item, index) => (
-            <tr key={item.id} className="bg-transparent">
-              <td colSpan={4} className="p-2">
-                <div
-                  className={`flex items-center justify-between p-2 rounded-lg ${
-                    index % 2 === 0 ? "bg-gray-50" : "bg-indigo-50"
-                  } hover:bg-gray-100 shadow-sm`}
-                >
-                  <div className="flex items-center space-x-2 w-1/5">
-                    <span>{index + 1}</span>
-                  </div>
+    <table className="min-w-full text-sm bg-white border-separate border-spacing-y-3">
+  <thead>
+    <tr className="text-gray-500 text-left bg-white">
+      <th className="py-3 px-4 w-1/12">Sl no</th>
+      <th className="py-3 px-4 w-3/12">Name</th>
+      <th className="py-3 px-4 w-3/12">Department</th>
+      <th className="py-3 px-4 w-3/12">Designation</th>
+      <th className="py-3 px-4 w-2/12">Submissions</th>
+    </tr>
+  </thead>
 
-                  <div className="flex items-center space-x-2 w-1/5">
-                    <span>{item.name}</span>
-                  </div>
+  <tbody>
+    {employees.map((item, index) => (
+      <tr
+        key={item.id}
+        className={`rounded-2xl ${
+          index % 2 === 0 ? "bg-[#F3F2FD]" : "bg-[#E9F4FF]"
+        }`}
+      >
+        {/* Sl no */}
+        <td className="py-3 px-4 rounded-l-2xl">{index + 1}</td>
 
-                  <div className="w-1/5">{item.number}</div>
+        {/* Name with avatar */}
+        <td className="py-3 px-4 flex items-center space-x-2">
+          <img
+            src={
+              "https://img.freepik.com/premium-vector/default-avatar-profile-icon-social-media-user-image-gray-avatar-icon-blank-profile-silhouette-vector-illustration_561158-3485.jpg?w=1380"
+            }
+            alt={item.name}
+            className="w-8 h-8 rounded-full"
+          />
+          <span className="font-medium">{item.name}</span>
+        </td>
 
-                  <div className="w-1/5">
-                    <button
-                      onClick={() => handleViewSubmission(item.id)}
-                      className="flex items-center bg-blue-200 hover:bg-gray-300 text-xs px-3 py-1 rounded-lg"
-                    >
-                      View Submission
-                      <FaEye className="ml-2 text-gray-600" size={12} />
-                    </button>
-                  </div>
-                </div>
-              </td>
-            </tr>
-          ))}
+        {/* Department */}
+        <td className=" px-4">{item.department_name || "-"}</td>
 
-          {employees.length === 0 && (
-            <tr>
-              <td colSpan={4} className="text-center py-4 text-gray-400">
-                No reimbursements found
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+        {/* Designation */}
+        <td className=" px-4">{item.designation || "-"}</td>
+
+        {/* Submissions button */}
+        <td className="  rounded-r-2xl">
+          <div className=" ">
+            <button
+              onClick={() => handleViewSubmission(item.id)}
+              className="flex items-center bg-[#C7DFFF] hover:bg-[#B6D4FF] text-sm px-4 py-1.5 rounded-lg"
+            >
+              View Submission
+              <FaEye className="ml-2 text-black" size={14} />
+            </button>
+          </div>
+        </td>
+      </tr>
+    ))}
+
+    {employees.length === 0 && (
+      <tr>
+        <td colSpan={5} className="text-center py-4 text-gray-400">
+          No reimbursements found
+        </td>
+      </tr>
+    )}
+  </tbody>
+</table>
+
+
     </div>
   );
 };

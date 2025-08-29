@@ -37,6 +37,26 @@ serve(async (req) => {
           })
           .eq("id", userId);
       }
+   if (updateData?.assets || updateData?.unique_assets) {
+  const { error: assetError } = await supabase
+    .from("asset_allocations")
+    .upsert(
+      {
+        user_id: userId,
+        company_id: updateData.company_id,
+        assets: updateData.assets || [],
+        unique_assets: updateData.unique_assets || null,
+        created_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" } // 👈 works only if user_id is unique
+    );
+
+  if (assetError) throw assetError;
+}
+
+
+
+
 
       if (updateData?.email || updateData?.password) {
         await supabase.auth.admin.updateUserById(userId, {

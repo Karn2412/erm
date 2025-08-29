@@ -8,52 +8,69 @@ interface Employee {
   id: string;
   name: string;
   number: string;
+  department_name?: string | null; // ✅ include department
 }
 
 const ReimbursementsPage: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [search, setSearch] = useState("");
 
-  const fetchEmployees = useCallback(async () => {
-    // Step 1: Get reimbursements (skip CANCELLED)
-    const { data: reimbursements, error: reimbErr } = await supabase
-      .from("reimbursements")
-      .select("user_id")
-      .neq("status", "CANCELLED");
+const fetchEmployees = useCallback(async () => {
+  // Step 1: Get reimbursements (skip CANCELLED)
+  const { data: reimbursements, error: reimbErr } = await supabase
+    .from("reimbursements")
+    .select("user_id")
+    .neq("status", "CANCELLED");
 
-    if (reimbErr) {
-      console.error("❌ reimbursements fetch", reimbErr);
-      return;
-    }
+  if (reimbErr) {
+    console.error("❌ reimbursements fetch", reimbErr);
+    return;
+  }
 
-    const userIds = [...new Set((reimbursements || []).map((r) => r.user_id))];
-    if (userIds.length === 0) {
-      setEmployees([]);
-      return;
-    }
+  const userIds = [...new Set((reimbursements || []).map((r) => r.user_id))];
+  if (userIds.length === 0) {
+    setEmployees([]);
+    return;
+  }
 
-    // Step 2: Get users
-    const { data: users, error: userErr } = await supabase
-      .from("users")
-      .select("id, name, number")
-      .in("id", userIds);
+  // Step 2: Get users with department + designation join
+  const { data: users, error: userErr } = await supabase
+    .from("users")
+    .select(`
+      id,
+      name,
+      number,
+      departments ( department_name ),
+      designations ( designation )
+    `)
+    .in("id", userIds);
 
-    if (userErr) {
-      console.error("❌ users fetch", userErr);
-      return;
-    }
+  if (userErr) {
+    console.error("❌ users fetch", userErr);
+    return;
+  }
 
-    setEmployees(users || []);
-  }, []);
+  setEmployees(
+    (users || []).map((u: any) => ({
+      id: u.id,
+      name: u.name,
+      number: u.number,
+      department_name: u.departments?.department_name || null,
+      designation: u.designations?.designation || null,
+    }))
+  );
+}, []);
+
 
   useEffect(() => {
     fetchEmployees();
   }, [fetchEmployees]);
 
   // 🔎 filter employees client-side
-  const filteredEmployees = employees.filter((emp) =>
-    emp.name.toLowerCase().includes(search.toLowerCase()) ||
-    emp.number.toLowerCase().includes(search.toLowerCase())
+  const filteredEmployees = employees.filter(
+    (emp) =>
+      emp.name.toLowerCase().includes(search.toLowerCase()) ||
+      emp.number.toLowerCase().includes(search.toLowerCase())
   );
 
   return (

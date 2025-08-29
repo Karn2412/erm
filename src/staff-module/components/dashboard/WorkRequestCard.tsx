@@ -65,8 +65,8 @@ const WorkRequestCard: React.FC = () => {
   const rejectedCount = requests.filter(r => r.status === "REJECTED").length;
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-lg">
-      <h2 className="text-lg font-semibold text-gray-800 mb-6">
+    <div className="bg-gray-50 p-6 rounded-2xl ">
+      <h2 className=" font-semibold text-gray-800 mb-6">
         Work Related Requests
       </h2>
 

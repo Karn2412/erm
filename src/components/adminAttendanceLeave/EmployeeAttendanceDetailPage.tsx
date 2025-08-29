@@ -4,7 +4,6 @@ import { startOfWeek, endOfWeek, endOfMonth, format } from 'date-fns';
 import { supabase } from '../../supabaseClient';
 import { FaMapMarkerAlt } from 'react-icons/fa';
 
-
 import EmployeeAttendanceHeader from './EmployeeAttendanceHeader';
 
 interface AttendanceRecord {
@@ -17,26 +16,18 @@ interface AttendanceRecord {
   checkOutLocation: { lat: number; long: number } | null;
   requestType?: string;
   requestStatus?: string;
+  isFuture?: boolean;
 }
 
 const EmployeeAttendanceDetailPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
-
-
   const today = new Date();
-  const [selectedMonth, ] = useState(today.getMonth());
-  const [selectedYear, ] = useState(today.getFullYear());
+
+  const [selectedMonth] = useState(today.getMonth());
+  const [selectedYear] = useState(today.getFullYear());
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
-
-  const getCurrentWeekDates = () => {
-    const start = startOfWeek(today, { weekStartsOn: 1 });
-    const end = endOfWeek(today, { weekStartsOn: 1 });
-    return attendanceData.filter(item => {
-      const itemDate = new Date(item.date);
-      return itemDate >= start && itemDate <= end;
-    });
-  };
+  const [employee, setEmployee] = useState<{ name: string; department: string; designation: string } | null>(null);
 
   const getColorBorder = (status: string) => {
     switch (status) {
@@ -64,26 +55,44 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
     }
   };
 
-  const [employee, setEmployee] = useState<{ name: string; department: string; designation: string } | null>(null);
+  useEffect(() => {
+    if (!userId) return;
 
-useEffect(() => {
-  if (!userId) return;
-  const fetchEmployee = async () => {
-    const { data } = await supabase
-      .from("users")
-      .select("name, department, designation")
-      .eq("id", userId)
-      .single();
-    setEmployee(data);
-  };
-  fetchEmployee();
-}, [userId]);
+    const fetchEmployee = async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select(`
+          name,
+          departments ( department_name ),
+          designations ( designation )
+        `)
+        .eq("id", userId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching employee:", error);
+      } else if (data) {
+        setEmployee({
+          name: data.name,
+          department: (data.departments as any)?.department_name || "",
+          designation: (data.designations as any)?.designation || "",
+        });
+        console.log("Employee data:", {
+          name: data.name,
+          department: (data.departments as any)?.department_name || "",
+          designation: (data.designations as any)?.designation || "",
+        });
+      }
+    };
+
+    fetchEmployee();
+  }, [userId]);
+
 
   useEffect(() => {
     if (!userId) return;
 
     const fetchAttendance = async () => {
-      
       const startDate = format(new Date(selectedYear, selectedMonth, 1), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(selectedYear, selectedMonth)), 'yyyy-MM-dd');
 
@@ -98,7 +107,6 @@ useEffect(() => {
       if (error) {
         console.error('Error fetching attendance:', error);
         setAttendanceData([]);
-       
         return;
       }
 
@@ -119,16 +127,14 @@ useEffect(() => {
           const checkOutLat = dbEntry.check_out_latitudes?.[0] ?? null;
           const checkOutLong = dbEntry.check_out_longitudes?.[0] ?? null;
 
-          // default status from attendance
           let status = dbEntry.attendance_statuses?.[0] || 'Absent';
 
-          // ✅ override based on requests
           if (dbEntry.request_type && dbEntry.request_status === 'APPROVED') {
             switch (dbEntry.request_type) {
               case 'REGULARIZATION': status = 'Regularized'; break;
               case 'WFH': status = 'Work From Home'; break;
               case 'LEAVE': status = 'Approved Leave'; break;
-              case 'OFF': status = 'Approved Off'; break;
+              case 'APPROVED OFF': status = 'Approved Off'; break;
             }
           }
 
@@ -137,11 +143,12 @@ useEffect(() => {
             date: dbEntry.attendance_date,
             hoursWorked: dbEntry.total_worked_hours?.toFixed(2) ?? '0.00',
             expectedHours: dbEntry.expected_hours?.toFixed(2) ?? '0.00',
-            status,
+            status: isWeekend ? 'Approved Off' : isFuture ? 'Incomplete' : status,
             checkInLocation: checkInLat && checkInLong ? { lat: checkInLat, long: checkInLong } : null,
             checkOutLocation: checkOutLat && checkOutLong ? { lat: checkOutLat, long: checkOutLong } : null,
             requestType: dbEntry.request_type,
-            requestStatus: dbEntry.request_status
+            requestStatus: dbEntry.request_status,
+            isFuture,
           });
         } else {
           transformed.push({
@@ -152,88 +159,100 @@ useEffect(() => {
             status: isWeekend ? 'Approved Off' : isFuture ? 'Incomplete' : 'Absent',
             checkInLocation: null,
             checkOutLocation: null,
+            isFuture,
           });
         }
       }
 
       setAttendanceData(transformed);
-      
     };
 
     fetchAttendance();
   }, [userId, selectedMonth, selectedYear]);
 
-  return (
-    <>
-      {/* <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1">
-        <Header /> */}
-        <div className="p-6 backdrop-blur-md bg-white/50 rounded-xl shadow-inner">
-          <EmployeeAttendanceHeader
-  viewMode={viewMode}
-  setViewMode={setViewMode}
-  employeeName={employee?.name || ""}
-  department={employee?.department || ""}
-  // designation={employee?.designation || ""}
-  showRequestsButton={true}
-  userId={userId ?? ""}
-/>
+  const getCurrentWeekDates = () => {
+    const start = startOfWeek(today, { weekStartsOn: 1 });
+    const end = endOfWeek(today, { weekStartsOn: 1 });
+    return attendanceData.filter(item => {
+      const itemDate = new Date(item.date);
+      return itemDate >= start && itemDate <= end;
+    });
+  };
 
-          <div
-            className="overflow-y-scroll overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm p-2"
-            style={{ height: '500px', scrollbarGutter: 'stable' }}
-          >
-            {viewMode === 'weekly' ? (
-              <table className="min-w-full text-sm border-separate border-spacing-y-2">
-                <thead className="bg-gray-100 text-gray-700">
-                  <tr>
-                    <th className="py-2 px-3 text-left rounded-lg">Day</th>
-                    <th className="py-2 px-3 text-left rounded-lg">Date</th>
-                    <th className="py-2 px-3 text-left rounded-lg">Check In</th>
-                    <th className="py-2 px-3 text-left rounded-lg">Progress</th>
-                    <th className="py-2 px-3 text-left rounded-lg">Check Out</th>
-                    <th className="py-2 px-3 text-left rounded-lg">Hours</th>
-                    <th className="py-2 px-3 text-left rounded-lg">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {getCurrentWeekDates().map((item, index) => (
-                    <tr key={index} className={`shadow-sm rounded-lg ${index % 2 === 0 ? 'bg-blue-50' : 'bg-white'} hover:bg-blue-100`}>
+  return (
+    <div className="p-6 backdrop-blur-md bg-white/50 rounded-xl shadow-inner">
+      <div className='bg-gray-100 rounded-2xl p-3'>
+        <EmployeeAttendanceHeader
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          employeeName={employee?.name || ""}
+          department={employee?.department || ""}
+          showRequestsButton={true}
+          userId={userId ?? ""}
+          designation={employee?.designation || ""}
+        />
+
+        <div className="overflow-y-scroll overflow-x-auto p-2" style={{ height: '500px', scrollbarGutter: 'stable' }}>
+          {viewMode === 'weekly' ? (
+            <table className="min-w-full text-sm border-separate border-spacing-y-2">
+              <thead className="bg-gray-100 text-gray-700">
+                <tr>
+                  <th className="py-2 px-3 text-left rounded-lg">Day</th>
+                  <th className="py-2 px-3 text-left rounded-lg">Date</th>
+                  <th className="py-2 px-3 text-left rounded-lg">Check In</th>
+                  <th className="py-2 px-3 text-left rounded-lg">Progress</th>
+                  <th className="py-2 px-3 text-left rounded-lg">Check Out</th>
+                  <th className="py-2 px-3 text-left rounded-lg">Hours</th>
+                  <th className="py-2 px-3 text-left rounded-lg">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {getCurrentWeekDates().map((item, index) => {
+                  const dateObj = new Date(item.date);
+                  const weekday = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+                  const isWeekend = weekday === 'Saturday' || weekday === 'Sunday';
+                  const isFuture = dateObj > today;
+
+                  let status: string;
+                  if (item.status) {
+                    if (isWeekend) {
+                      status = 'Approved Off';
+                    } else if (isFuture) {
+                      status = 'Incomplete';
+                    } else {
+                      status = item.status;
+                    }
+                  } else {
+                    status = isWeekend ? 'Approved Off' : isFuture ? 'Incomplete' : 'Absent';
+                  }
+
+                  return (
+                    <tr key={index} className={`shadow-sm rounded-lg ${index % 2 === 0 ? 'bg-blue-50' : 'bg-indigo-50'} hover:bg-blue-100`}>
                       <td className="py-2 px-3 rounded-l-lg">{item.day}</td>
                       <td className="py-2 px-3">{item.date}</td>
                       <td className="py-2 px-3 text-blue-600 hover:text-blue-800">
                         {item.checkInLocation ? (
-                          <a
-                            href={`https://www.google.com/maps?q=${item.checkInLocation.lat},${item.checkInLocation.long}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1"
-                          >
+                          <a href={`https://www.google.com/maps?q=${item.checkInLocation.lat},${item.checkInLocation.long}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
                             <FaMapMarkerAlt className="text-red-500" /> View
                           </a>
                         ) : '--'}
                       </td>
                       <td className="py-2 px-3">
                         <div className="flex items-center space-x-1">
-                          <div className={`w-3 h-3 rounded-full ${getColorBg(item.status)}`}></div>
+                          <div className={`w-3 h-3 rounded-full ${getColorBg(status)}`}></div>
                           <span className="text-xs text-gray-600">{item.hoursWorked} / {item.expectedHours}</span>
                         </div>
                       </td>
                       <td className="py-2 px-3 text-blue-600 hover:text-blue-800">
                         {item.checkOutLocation ? (
-                          <a
-                            href={`https://www.google.com/maps?q=${item.checkOutLocation.lat},${item.checkOutLocation.long}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1"
-                          >
+                          <a href={`https://www.google.com/maps?q=${item.checkOutLocation.lat},${item.checkOutLocation.long}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
                             <FaMapMarkerAlt className="text-green-500" /> View
                           </a>
                         ) : '--'}
                       </td>
                       <td className="py-2 px-3">{item.hoursWorked}</td>
                       <td className="py-2 px-3 rounded-r-lg">
-                        {item.status}
+                        {status}
                         {item.requestType && item.requestStatus === 'APPROVED' && (
                           <span className="ml-2 px-2 py-1 rounded bg-green-200 text-green-700 text-xs font-semibold">
                             {item.requestType}
@@ -241,86 +260,116 @@ useEffect(() => {
                         )}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <>
-                {/* Monthly Day Headers */}
-                <div className="grid grid-cols-7 text-center text-sm font-semibold text-gray-600 mb-2">
-                  <div>Monday</div>
-                  <div>Tuesday</div>
-                  <div>Wednesday</div>
-                  <div>Thursday</div>
-                  <div>Friday</div>
-                  <div>Saturday</div>
-                  <div>Sunday</div>
-                </div>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
 
-                {/* Monthly Grid Cards */}
-                <div className="grid grid-cols-7 gap-4">
-                  {attendanceData.length > 0 ? (
-                    <>
-                      {(() => {
-                        const firstDay = new Date(selectedYear, selectedMonth, 1);
-                        const jsDay = firstDay.getDay();
-                        const offset = (jsDay + 6) % 7;
-                        return Array.from({ length: offset }).map((_, idx) => (
-                          <div key={`empty-${idx}`} className="h-24"></div>
-                        ));
-                      })()}
+            <div className="p-6 bg-gray-50 rounded-2xl">
+              {/* Weekday headers */}
+              <div className="grid grid-cols-7 text-center text-sm font-semibold text-gray-500 mb-4">
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                  <div key={day}>{day}</div>
+                ))}
+              </div>
 
-                      {attendanceData.map((dayData, index) => (
-                        <div
-                          key={index}
-                          className={`rounded-lg border-1 ${getColorBorder(dayData.status)} flex flex-col justify-between overflow-hidden h-24`}
-                        >
-                          {/* Top - Date + Map Icons */}
-                          <div className="flex justify-between items-start px-2 py-1 text-sm font-semibold text-gray-800">
-                            <div>{format(new Date(dayData.date), 'd')}</div>
-                            <div className="flex gap-1">
-                              {dayData.checkInLocation && (
-                                <a
-                                  href={`https://www.google.com/maps?q=${dayData.checkInLocation.lat},${dayData.checkInLocation.long}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  title="Check-in Location"
-                                >
-                                  <FaMapMarkerAlt className="text-red-500 hover:text-red-700" />
-                                </a>
-                              )}
-                              {dayData.checkOutLocation && (
-                                <a
-                                  href={`https://www.google.com/maps?q=${dayData.checkOutLocation.lat},${dayData.checkOutLocation.long}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  title="Check-out Location"
-                                >
-                                  <FaMapMarkerAlt className="text-green-500 hover:text-green-700" />
-                                </a>
-                              )}
-                            </div>
-                          </div>
+              {/* Calendar grid */}
+              <div className="grid grid-cols-7 gap-3">
+                {(() => {
+                  const firstDay = new Date(selectedYear, selectedMonth, 1);
+                  const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+                  const firstDayIndex = (firstDay.getDay() + 6) % 7; // Monday start
 
-                          <div className="flex-grow"></div>
+                  const calendarDays = [];
+                  for (let i = 0; i < firstDayIndex; i++) {
+                    calendarDays.push(<div key={`empty-${i}`} />);
+                  }
 
-                          {/* Bottom - Status */}
-                          <div className={`${getColorBg(dayData.status)} text-white text-center py-1 text-[14px] font-semibold`}>
-                            {dayData.status}
+                  for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(selectedYear, selectedMonth, day);
+                    const formatted = format(date, 'yyyy-MM-dd');
+                    const found = attendanceData.find((d) => d.date === formatted);
+                    const isFuture = date > today;
+                    const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+                    const isWeekend = weekday === 'Saturday' || weekday === 'Sunday';
+
+                    let status: string;
+                    if (found) {
+                      if (isWeekend) {
+                        status = 'Approved Off';
+                      } else if (isFuture) {
+                        status = 'Incomplete';
+                      } else {
+                        status = found.status;
+                      }
+                    } else {
+                      status = isWeekend ? 'Approved Off' : isFuture ? 'Incomplete' : 'Absent';
+                    }
+
+                    calendarDays.push(
+                      <div
+                        key={formatted}
+                        className={`relative rounded-xl border ${getColorBorder(status)} shadow-sm hover:shadow-md flex flex-col justify-between h-24 bg-white`}
+                      >
+                        {/* Top row with date + geolocation */}
+                        <div className="flex justify-between px-2 pt-2 text-sm font-medium text-gray-800">
+                          <span>{day}</span>
+                          <div className="flex gap-1">
+                            {!isFuture && found?.checkInLocation && (
+                              <a
+                                href={`https://www.google.com/maps?q=${found.checkInLocation.lat},${found.checkInLocation.long}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Check-in Location"
+                              >
+                                <FaMapMarkerAlt className="text-red-500 hover:text-red-700 text-xs" />
+                              </a>
+                            )}
+                            {!isFuture && found?.checkOutLocation && (
+                              <a
+                                href={`https://www.google.com/maps?q=${found.checkOutLocation.lat},${found.checkOutLocation.long}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Check-out Location"
+                              >
+                                <FaMapMarkerAlt className="text-green-500 hover:text-green-700 text-xs" />
+                              </a>
+                            )}
                           </div>
                         </div>
-                      ))}
-                    </>
-                  ) : (
-                    <div className="col-span-7 text-center text-gray-500">No attendance data found</div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+
+                        {/* Center with hours */}
+                        <div className="text-center text-xs px-2">
+                          {/* {!isFuture && found?.hoursWorked !== '0.00'
+                  ? `${found?.hoursWorked} / ${found?.expectedHours}`
+                  : isFuture
+                  ? `${found?.expectedHours || '0.00'} hrs expected`
+                  : null} */}
+                        </div>
+
+                        {/* Status footer */}
+                        <div
+                          className={`text-[13px] rounded-b-xl font-semibold text-white text-center py-1 ${getColorBg(
+                            status
+                          )}`}
+                        >
+                          {status}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return calendarDays;
+                })()}
+              </div>
+            </div>
+          )}
+
+
         </div>
-      </>
-    
+      </div>
+    </div>
   );
 };
 

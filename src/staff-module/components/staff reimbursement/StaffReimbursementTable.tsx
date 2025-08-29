@@ -1,7 +1,7 @@
-// src/components/staff reimbursement/StaffReimbursementTable.tsx
 import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../../../supabaseClient";
-import toast from "react-hot-toast";
+
+import { FaEye } from "react-icons/fa";
 
 interface Props {
   refresh: number;
@@ -24,6 +24,8 @@ const getStatusColor = (status: string) => {
       return "text-green-600";
     case "REJECTED":
       return "text-red-500";
+    case "PENDING":
+      return "text-yellow-600";
     default:
       return "text-gray-500";
   }
@@ -67,54 +69,23 @@ const ReimbursementTable: React.FC<Props> = ({ refresh }) => {
     fetchData();
   }, [refresh]);
 
-  // Delete
-  async function handleDelete(id: string) {
-    const { error } = await supabase.from("reimbursements").delete().eq("id", id);
-    if (error) {
-      toast.error("Failed to delete reimbursement");
-      return;
-    }
-    toast.success("Reimbursement deleted");
-    fetchData();
-  }
-
-  // Edit
-  async function handleEdit(item: Reimbursement) {
-    const newAmount = prompt("Enter new amount:", String(item.amount));
-    if (!newAmount) return;
-
-    const { error } = await supabase
-      .from("reimbursements")
-      .update({ amount: Number(newAmount) })
-      .eq("id", item.id)
-      .eq("status", "PENDING");
-
-    if (error) {
-      toast.error("Failed to update reimbursement");
-      return;
-    }
-    toast.success("Reimbursement updated");
-    fetchData();
-  }
-
-  // ✅ Check if at least one row is pending → controls header + layout
   const hasPending = useMemo(() => data.some((item) => item.status === "PENDING"), [data]);
 
   return (
-    <div className="bg-white mt-8 rounded-2xl shadow-sm p-6">
-      <h3 className="text-lg font-semibold mb-4 text-gray-800  pb-2">
+    <div className="bg-gray-50 mt-8 rounded-2xl p-6">
+      <h3 className="text-lg font-semibold mb-4 text-gray-800 pb-2">
         Previous Submissions
       </h3>
 
-      {/* Table Header */}
+      {/* Header */}
       <div
         className={`grid ${
           hasPending ? "grid-cols-9" : "grid-cols-7"
         } text-xs font-semibold text-gray-600 px-4 py-2`}
       >
-        <div>Sl No</div>
-        <div>Type</div>
-        <div>Date</div>
+        <div>Sl no</div>
+        <div>Type of Reimbursement</div>
+        <div>Expense Date</div>
         <div>Description</div>
         <div>Amount</div>
         <div>Proof</div>
@@ -123,31 +94,33 @@ const ReimbursementTable: React.FC<Props> = ({ refresh }) => {
         {hasPending && <div>Delete</div>}
       </div>
 
-      {/* Table Rows */}
+      {/* Rows */}
       <div className="mt-2 space-y-3">
         {data.map((item, i) => {
           const showActions = item.status === "PENDING";
+
           return (
             <div
               key={item.id}
               className={`grid ${
                 hasPending ? "grid-cols-9" : "grid-cols-7"
-              } items-center px-4 py-3 text-sm rounded-xl bg-gray-50 shadow-sm hover:shadow-md transition`}
+              } items-center px-4 py-3 text-sm rounded-xl transition 
+              ${i % 2 === 0 ? "bg-indigo-50" : "bg-blue-50"}`}
             >
               <div>{i + 1}</div>
               <div className="font-medium">{item.category}</div>
               <div>{new Date(item.expense_date).toLocaleDateString()}</div>
               <div className="truncate text-gray-600">{item.description || "-"}</div>
-              <div className="font-semibold">₹{item.amount}</div>
-              <div>
+              <div className="font-semibold">{item.amount}</div>
+              <div className="">
                 {item.proofUrl ? (
                   <a
                     href={item.proofUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-blue-600 hover:underline"
+                    className="flex items-center gap-2 bg-blue-100 px-3 py-1 rounded-lg text-blue-700 hover:bg-blue-200"
                   >
-                    View
+                    View <FaEye />
                   </a>
                 ) : (
                   "-"
@@ -157,25 +130,18 @@ const ReimbursementTable: React.FC<Props> = ({ refresh }) => {
                 {item.status}
               </div>
 
-              {/* Action Buttons */}
               {hasPending && (
                 <>
                   <div>
                     {showActions && (
-                      <button
-                        onClick={() => handleEdit(item)}
-                        className="px-3 py-1 text-xs rounded-full bg-yellow-200 hover:bg-yellow-300 text-yellow-800"
-                      >
+                      <button className="px-3 py-1 text-xs rounded-full bg-yellow-200 hover:bg-yellow-300 text-yellow-800">
                         Edit
                       </button>
                     )}
                   </div>
                   <div>
                     {showActions && (
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        className="px-3 py-1 text-xs rounded-full bg-red-200 hover:bg-red-300 text-red-800"
-                      >
+                      <button className="px-3 py-1 text-xs rounded-full bg-red-200 hover:bg-red-300 text-red-800">
                         Delete
                       </button>
                     )}

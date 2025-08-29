@@ -66,16 +66,16 @@ const AddEmployeePage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <div className="flex flex-col flex-1 w-full overflow-hidden">
+    <div className="flex h-screen bg-gray-50 ">
+      <div className="flex flex-col flex-1 w-full ">
         {/* Mobile header */}
         <div className="md:hidden flex justify-between items-center bg-white p-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold">Add Employee</h2>
         </div>
 
         {/* Main Content */}
-        <main className="p-6 overflow-auto space-y-6">
-          <div className="bg-white p-6 rounded-md shadow-sm">
+        <main className="p-6 space-y-6">
+          <div className="bg-white p-6 rounded-2xl shadow-sm">
             <AddEmployeeStepper
               onStepChange={(step) => setCurrentStep(step)}
               currentStep={currentStep}

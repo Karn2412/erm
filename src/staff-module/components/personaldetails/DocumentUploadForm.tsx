@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../../../supabaseClient";
+import { FaUpload } from "react-icons/fa";
 
 interface Document {
   name: string;
@@ -9,24 +10,61 @@ interface Document {
 interface Props {
   formData: { documents: Document[] };
   setFormData: React.Dispatch<React.SetStateAction<any>>;
+  requiredDocs: string[];
 }
 
-const DocumentUploadForm: React.FC<Props> = ({ formData, setFormData }) => {
-  const [newDocName, setNewDocName] = useState("");
+const DocumentUploadForm: React.FC<Props> = ({
+  formData,
+  setFormData,
+  requiredDocs,
+}) => {
   const [newDocFile, setNewDocFile] = useState<File | null>(null);
 
-  // ✅ Upload file immediately and update DB + state
-  const handleAddDocument = async () => {
-    if (!newDocName || !newDocFile) return;
+console.log(newDocFile);
+
+
+  // ✅ Fetch existing documents from DB on mount
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      const { data: authUser } = await supabase.auth.getUser();
+      const userId = authUser?.user?.id;
+      if (!userId) return;
+
+      const { data, error } = await supabase
+        .from("personal_details")
+        .select("documents")
+        .eq("id", userId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching documents:", error);
+        return;
+      }
+
+      if (data?.documents) {
+        setFormData((prev: any) => ({
+          ...prev,
+          documents: data.documents,
+        }));
+      }
+    };
+
+    fetchDocuments();
+  }, [setFormData]);
+
+  // ✅ Upload file immediately
+  const handleAddDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    setNewDocFile(file);
 
     try {
-      // Upload file to Supabase Storage
-      const sanitizedName = newDocFile.name.replace(/\s+/g, "_");
+      const sanitizedName = file.name.replace(/\s+/g, "_");
       const path = `documents/${Date.now()}_${sanitizedName}`;
 
       const { error } = await supabase.storage
         .from("usersdocuments")
-        .upload(path, newDocFile, { cacheControl: "3600", upsert: true });
+        .upload(path, file, { cacheControl: "3600", upsert: true });
 
       if (error) throw error;
 
@@ -34,36 +72,30 @@ const DocumentUploadForm: React.FC<Props> = ({ formData, setFormData }) => {
         .from("usersdocuments")
         .getPublicUrl(path);
 
-      const newDoc = { name: newDocName, url: data.publicUrl };
+      const newDoc = { name: file.name, url: data.publicUrl };
+      const updatedDocs = [...(formData.documents || []), newDoc];
 
-      // Update local state
       setFormData((prev: any) => ({
         ...prev,
-        documents: [...(prev.documents || []), newDoc],
+        documents: updatedDocs,
       }));
 
-      // Update Supabase DB
+      // save to DB
       const { data: authUser } = await supabase.auth.getUser();
       const userId = authUser?.user?.id;
-
       if (userId) {
         await supabase
           .from("personal_details")
-          .update({
-            documents: [...(formData.documents || []), newDoc],
-          })
+          .update({ documents: updatedDocs })
           .eq("id", userId);
       }
-
-      setNewDocName("");
-      setNewDocFile(null);
     } catch (err) {
       console.error("Upload Error:", err);
       alert("Failed to upload document.");
     }
   };
 
-  // ✅ Delete file from storage + DB + UI
+  // ✅ Delete file
   const handleDeleteDocument = async (doc: Document) => {
     if (!doc.url) return;
 
@@ -72,14 +104,11 @@ const DocumentUploadForm: React.FC<Props> = ({ formData, setFormData }) => {
         doc.url.split("/storage/v1/object/public/usersdocuments/")[1]
       );
 
-      // Remove from storage
       await supabase.storage.from("usersdocuments").remove([filePath]);
 
-      // Update local state
       const updatedDocs = formData.documents.filter((d) => d.url !== doc.url);
       setFormData((prev: any) => ({ ...prev, documents: updatedDocs }));
 
-      // Update DB
       const { data: authUser } = await supabase.auth.getUser();
       const userId = authUser?.user?.id;
       if (userId) {
@@ -94,67 +123,66 @@ const DocumentUploadForm: React.FC<Props> = ({ formData, setFormData }) => {
     }
   };
 
+  // ✅ View file (open in new tab)
+  const handleViewDocument = (doc: Document) => {
+    if (doc.url) {
+      window.open(doc.url, "_blank");
+    }
+  };
+
   return (
-    <div className="p-6 rounded-md shadow-sm bg-white">
-      <h2 className="text-lg font-bold mb-4">Uploaded Documents</h2>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Upload Listed Documents <span className="text-red-500">*</span>
+      </label>
 
-      {/* Add new document */}
-      <div className="mb-6">
-        <h3 className="font-semibold text-md mb-2">Add New Document</h3>
-        <input
-          type="text"
-          placeholder="Document Name"
-          value={newDocName}
-          onChange={(e) => setNewDocName(e.target.value)}
-          className="border rounded p-2 w-full mb-2"
-        />
-        <input
-          type="file"
-          onChange={(e) => setNewDocFile(e.target.files?.[0] || null)}
-          className="border rounded p-2 w-full mb-2"
-        />
-        <button
-          type="button"
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-          onClick={handleAddDocument}
-        >
-          Add Document
-        </button>
-      </div>
-
-      {/* List of uploaded documents */}
-      {formData.documents?.length > 0 && (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
+        {/* Left Column - Upload + Required Docs */}
         <div>
-          <h4 className="font-medium mb-2">Uploaded Documents:</h4>
-          <ul className="space-y-2">
-            {formData.documents.map((doc, index) => (
-              <li
-                key={index}
-                className="flex justify-between items-center border p-2 rounded"
-              >
-                <span>{doc.name}</span>
-                <div className="space-x-3">
-                  <a
-                    href={doc.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-blue-600 underline"
-                  >
-                    View
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteDocument(doc)}
-                    className="text-red-600 hover:underline"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </li>
+          <label className="inline-flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-full cursor-pointer hover:bg-blue-700 transition">
+            <FaUpload className="w-4 h-4" />
+            <span>Upload Files</span>
+            <input
+              type="file"
+              className="hidden"
+              onChange={handleAddDocument}
+            />
+          </label>
+
+          {/* Required documents list */}
+          <ul className="mt-8 list-decimal list-inside text-sm text-gray-800 space-y-1">
+            {requiredDocs.map((doc, idx) => (
+              <li key={idx}>{doc}</li>
             ))}
           </ul>
         </div>
-      )}
+
+        {/* Right Column - Uploaded Docs as Pills */}
+        <div className="space-y-2">
+          
+          <div className="flex flex-wrap gap-2">
+            {formData.documents?.map((doc, index) => (
+              <div
+                key={index}
+                className="flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-blue-200 transition"
+                onClick={() => handleViewDocument(doc)}
+              >
+                <span className="truncate max-w-[120px]">{doc.name}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteDocument(doc);
+                  }}
+                  className="ml-2 text-gray-600 hover:text-red-600"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

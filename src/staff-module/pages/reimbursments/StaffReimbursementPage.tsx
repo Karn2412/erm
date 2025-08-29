@@ -1,5 +1,6 @@
 // src/pages/staff/ReimbursementPage.tsx
 import React, { useState } from 'react';
+import { FaUpload, FaTimes } from "react-icons/fa";
 
 import ReimbursementTable from '../../components/staff reimbursement/StaffReimbursementTable';
 import { supabase } from '../../../supabaseClient';
@@ -14,6 +15,7 @@ const ReimbursementPage: React.FC = () => {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [file, setFile] = useState<File | null>(null);
+const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [refresh, setRefresh] = useState(0);
 
@@ -85,11 +87,11 @@ const ReimbursementPage: React.FC = () => {
     <div className="flex flex-col w-full">
         {/* <StaffSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} /> */}
         {/* <Header /> */}
-        <main className="p-6">
+        <main className="p-6 bg-white rounded-2xl ">
           <Toaster />
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="bg-white p-6 rounded-3xl shadow-md">
+          <form onSubmit={handleSubmit} className="bg-white p-6 rounded-3xl ">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium mb-1 text-gray-700">
@@ -149,14 +151,48 @@ const ReimbursementPage: React.FC = () => {
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-1 text-gray-700">
-                Upload Proof
-              </label>
-              <input
-                type="file"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="text-sm"
-              />
+  <label className="block text-sm font-medium mb-1 text-gray-700">
+    Upload Proof <span className="text-red-500">*</span>
+  </label>
+               {!file && (
+    <label className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full cursor-pointer text-sm">
+      <FaUpload />
+      Upload Files
+      <input
+        type="file"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0] || null;
+          if (f) {
+            setFile(f);
+            setPreviewUrl(URL.createObjectURL(f)); // create preview
+          }
+        }}
+      />
+    </label>
+  )}
+  {/* Uploaded file pill */}
+  {file && (
+    <div className="mt-2 flex items-center gap-2">
+      <div
+        onClick={() => previewUrl && window.open(previewUrl, "_blank")}
+        className="bg-blue-200 text-blue-900 px-4 py-2 rounded-full text-sm cursor-pointer flex items-center justify-between gap-3"
+      >
+        {file.name}
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          setFile(null);
+          setPreviewUrl(null);
+        }}
+        className="text-red-600 text-lg"
+      >
+        <FaTimes />
+      </button>
+    </div>
+  )}
+
             </div>
 
             <div className="text-end">
