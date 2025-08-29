@@ -45,7 +45,7 @@ const Header = () => {
       try {
         let data: any[] = [];
 
-        if (userData.role === "admin") {
+        if (userData?.role?.toLowerCase() === "admin") {
           // ✅ Attendance requests
           const { data: attendanceData, error: attErr } = await supabase
             .from("attendance_requests")
@@ -54,19 +54,15 @@ const Header = () => {
             .eq("status", "PENDING")
             .order("created_at", { ascending: false });
 
-          console.log("Attendance Data:", attendanceData);
-
           if (attErr) console.error("Attendance fetch error", attErr);
 
-          // ✅ Reimbursements (⚡ no aliasing in query, we alias in JS)
+          // ✅ Reimbursements
           const { data: reimbursementData, error: reimbErr } = await supabase
             .from("reimbursements")
             .select("id,user_id,category,status,description,expense_date,company_id")
             .eq("company_id", userData.company_id)
             .eq("status", "PENDING")
             .order("expense_date", { ascending: false });
-
-          console.log("Reimbursement Data:", reimbursementData);
 
           if (reimbErr) console.error("Reimbursement fetch error", reimbErr);
 
@@ -80,8 +76,8 @@ const Header = () => {
             ...(reimbursementData ?? []).map((r: any) => ({
               ...r,
               request_source: "REIMBURSEMENT",
-              request_type: r.category,     // alias here
-              created_at: r.expense_date,   // alias here
+              request_type: r.category,
+              created_at: r.expense_date,
               detail: r.description || "No details",
             })),
           ];
@@ -90,7 +86,7 @@ const Header = () => {
           const { data: staffData, error: staffErr } = await supabase
             .from("attendance_requests")
             .select("id,request_type,status,reason,created_at")
-            .eq("user_id", userData.id)
+            .eq("user_id", userData?.id)
             .in("status", ["APPROVED", "REJECTED"])
             .order("created_at", { ascending: false });
 
@@ -106,7 +102,7 @@ const Header = () => {
           status: r.status,
           created_at: r.created_at,
           detail: r.detail || r.reason || r.description || "No details",
-          requestedBy: userData.role === "admin" ? r.user_id : userData.name,
+          requestedBy: userData?.role?.toLowerCase() === "admin" ? r.user_id : userData?.name,
           navigateTo:
             r.request_source === "REIMBURSEMENT"
               ? `/reimbursements/${r.user_id}`
@@ -122,32 +118,30 @@ const Header = () => {
     fetchRequests();
   }, [userData?.company_id, userData?.id, userData?.role]);
 
-
   return (
     <div className="flex justify-between items-center bg-[#f8f8f8] px-6 py-3 ">
       {/* Left: Breadcrumb / Page Title */}
       <div className="flex items-center space-x-2 text-sm">
-
         <span className="text-gray-800 text-lg font-semibold mb-4">
           {location.pathname === "/employees/add"
             ? "Employee"
             : location.pathname.includes("employees")
-              ? "Employees"
-              : location.pathname.includes("attendance")
-                ? "Attendance And Leave"
-                : location.pathname.includes("pay")
-                  ? "Pay Runs"
-                  : location.pathname.includes("reimbursements")
-                    ? "Reimbursements"
-                    : location.pathname.includes("templates")
-                      ? "Templates"
-                      : location.pathname.includes("settings")
-                        ? "Settings"
-                        : location.pathname.includes("personal-details")
-                          ? "Personal Details"
-                          : location.pathname.includes("pay-slips")
-                            ? "Pay Slips"
-                            : "Dashboard"}
+            ? "Employees"
+            : location.pathname.includes("attendance")
+            ? "Attendance And Leave"
+            : location.pathname.includes("pay")
+            ? "Pay Runs"
+            : location.pathname.includes("reimbursements")
+            ? "Reimbursements"
+            : location.pathname.includes("templates")
+            ? "Templates"
+            : location.pathname.includes("settings")
+            ? "Settings"
+            : location.pathname.includes("personal-details")
+            ? "Personal Details"
+            : location.pathname.includes("pay-slips")
+            ? "Pay Slips"
+            : "Dashboard"}
         </span>
       </div>
 
@@ -173,11 +167,10 @@ const Header = () => {
           />
 
           {/* 🔴 Red dot when requests exist */}
-          {userData.role === "admin" && requests.length > 0 && (
+          {userData?.role?.toLowerCase() === "admin" && requests.length > 0 && (
             <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-600"></span>
           )}
         </div>
-
 
         {/* Profile */}
         <div className="relative" ref={dropdownRef}>
@@ -191,8 +184,12 @@ const Header = () => {
               className="rounded-full w-[32px] h-[32px]"
             />
             <div className="text-sm">
-              <p className="font-medium text-gray-800">{userData?.name || "Loading..."}</p>
-              <p className="text-xs text-gray-500">{userData?.role || "User"}</p>
+              <p className="font-medium text-gray-800">
+                {userData?.name || "Loading..."}
+              </p>
+              <p className="text-xs text-gray-500">
+                {userData?.role || "User"}
+              </p>
             </div>
           </div>
 
@@ -211,7 +208,7 @@ const Header = () => {
 
       {/* Notification Modal */}
       {showNotifModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-start pt-20 z-50" style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-start pt-20 z-50">
           <div className="bg-white rounded-lg shadow-lg w-[400px] max-h-[500px] overflow-y-auto">
             {/* Header */}
             <div className="flex justify-between items-center border-b px-4 py-2">
@@ -238,16 +235,21 @@ const Header = () => {
                   >
                     <div>
                       <p className="text-sm font-medium">{req.type} Request</p>
-                      <p className="text-xs text-gray-500">{req.detail || "No details"}</p>
-                      <p className="text-xs text-gray-400">{new Date(req.created_at).toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">
+                        {req.detail || "No details"}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(req.created_at).toLocaleString()}
+                      </p>
                     </div>
 
-                    {userData.role !== "Admin" && (
+                    {userData?.role?.toLowerCase() !== "admin" && (
                       <span
-                        className={`px-2 py-1 text-xs rounded-full font-semibold ${req.status === "APPROVED"
+                        className={`px-2 py-1 text-xs rounded-full font-semibold ${
+                          req.status === "APPROVED"
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
-                          }`}
+                        }`}
                       >
                         {req.status}
                       </span>
