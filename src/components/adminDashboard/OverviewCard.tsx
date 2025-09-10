@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { HiUsers, HiUserPlus, HiUserMinus  } from "react-icons/hi2";
-import { supabase } from "../../supabaseClient"; // adjust import path
+import { HiUsers, HiUserPlus, HiUserMinus } from "react-icons/hi2";
 import { HiTrendingDown } from "react-icons/hi";
+import { supabase } from "../../supabaseClient";
 
 interface Props {
   title: string;
@@ -12,7 +12,6 @@ interface Props {
 const OverviewCard: React.FC<Props> = ({ title, color, queryKey }) => {
   const [value, setValue] = useState<string>("0");
 
-  // Function to get the appropriate icon based on queryKey
   const getIcon = () => {
     switch (queryKey) {
       case "totalEmployees":
@@ -40,9 +39,9 @@ const OverviewCard: React.FC<Props> = ({ title, color, queryKey }) => {
 
         // ✅ 2. Find the company_id of this user
         const { data: user, error: userError } = await supabase
-          .from("user_with_email")
+          .from("users")
           .select("company_id")
-          .eq("auth_id", userId)
+          .eq("id", userId)
           .single();
 
         if (userError) {
@@ -51,10 +50,10 @@ const OverviewCard: React.FC<Props> = ({ title, color, queryKey }) => {
         }
         if (!user) return;
 
-        // ✅ 3. Query company stats view
+        // ✅ 3. Query company stats view (now includes exits)
         const { data: stats, error: statsError } = await supabase
           .from("company_employee_stats")
-          .select("total_employees, new_joinees, attrition_rate")
+          .select("total_employees, new_joinees, exits, attrition_rate")
           .eq("company_id", user.company_id)
           .single();
 
@@ -68,7 +67,9 @@ const OverviewCard: React.FC<Props> = ({ title, color, queryKey }) => {
         let result: string | number = "0";
         if (queryKey === "totalEmployees") result = stats.total_employees ?? 0;
         if (queryKey === "newJoinees") result = stats.new_joinees ?? 0;
+        if (queryKey === "exists") result = stats.exits ?? 0;
         if (queryKey === "attritionRate") result = stats.attrition_rate ?? "0%";
+
         setValue(result.toString());
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -81,11 +82,11 @@ const OverviewCard: React.FC<Props> = ({ title, color, queryKey }) => {
 
   return (
     <div className={`p-4 rounded-2xl shadow-sm ${color}`}>
-      <div className="flex items-start  gap-3">
+      <div className="flex items-start gap-3">
         {getIcon()}
         <div className="flex flex-col">
           <p className="text-sm text-gray-600">{title}</p>
-          <div className="text-xl  font-bold">{value}</div>
+          <div className="text-xl font-bold">{value}</div>
         </div>
       </div>
     </div>

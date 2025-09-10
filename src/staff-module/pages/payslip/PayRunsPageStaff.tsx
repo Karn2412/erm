@@ -67,7 +67,7 @@ const PayRunsPage = () => {
         <div className="p-5 mb-6 bg-white ">
           {/* Title */}
           <h2 className="text-lg font-semibold text-gray-800 mb-2">
-            Pay Runs
+            Pay Slips
           </h2>
 
           {/* Filter under heading */}

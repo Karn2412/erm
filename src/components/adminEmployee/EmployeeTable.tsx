@@ -11,38 +11,63 @@ interface Employee {
   number: string | null;
   department_name?: string;
   status?: boolean;
+  company_id?: string;
+  avatar?: string;
+  designation_id?: string | null;
+  location_id?: string | null;
+  work_location?: string | null;
 }
 
-const EmployeeTable: React.FC<{ search: string; department: string; designation: string }> = ({ search, department, designation }) => {
+const EmployeeTable: React.FC<{
+  search: string;
+  department: string;
+  designation: string;
+  workLocation: string;
+  setActiveEmployees: (emps: Employee[]) => void;
+  setInactiveEmployees: (emps: Employee[]) => void;
+}> = ({ search, department, designation, workLocation, setActiveEmployees, setInactiveEmployees }) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
   const { userData } = useUser();
 
- const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+
+  useEffect(() => {
+    if (selectedEmployee) {
+      console.log("Selected Employee:", selectedEmployee);
+    }
+  }, [selectedEmployee]);
+
   const fetchEmployees = async () => {
     if (!userData?.company_id || !userData?.id) return;
     setLoading(true);
 
-    let query = supabase
+    let query: any = supabase
       .from("user_with_email")
-      .select("auth_id, email, name, number, is_active, department_id, department_name, designation_id, company_id")
+      .select("auth_id, email, name, number, is_active, department_id, department_name, designation_id, company_id, gender, gender_avatar, location_id, work_location")
       .eq("company_id", userData.company_id)
       .neq("auth_id", userData.id);
 
-    // ✅ Filter by department
+    // Filter by department
     if (department) {
-      query = query.eq("department_name", department);
+      query = query.eq("department_id", department);
     }
 
-    // ✅ Apply search filter (case-insensitive, checks name/email/number)
+    // Search filter
     if (search) {
       query = query.or(
         `name.ilike.%${search}%,email.ilike.%${search}%,number.ilike.%${search}%`
       );
     }
-    // ✅ Filter by designation
+
+    // Filter by designation
     if (designation) {
-      query = query.eq("designation_id", designation); // 🔑 filter by designation id
+      query = query.eq("designation_id", designation);
+    }
+
+    // Filter by work location
+    if (workLocation) {
+      query = query.eq("location_id", workLocation);
     }
 
     const { data, error } = await query;
@@ -59,8 +84,24 @@ const EmployeeTable: React.FC<{ search: string; department: string; designation:
       email: emp.email,
       number: emp.number,
       department_name: emp.department_name,
+      company_id: emp.company_id,
       status: emp.is_active,
+      avatar: emp.gender_avatar || "https://dummyimage.com/100x100/cccccc/000000&text=User",
+      designation_id: emp.designation_id,
+      location_id: emp.location_id,
+      work_location: emp.work_location,
     }));
+
+    // produce active/inactive lists for More Filters
+    const activeList = formatted.filter((f: any) => f.status).map((f: any) => ({ id: f.id, name: f.name }));
+    const inactiveList = formatted.filter((f: any) => !f.status).map((f: any) => ({ id: f.id, name: f.name }));
+
+    // send these up to parent so filters can show them
+    setActiveEmployees(activeList);
+    setInactiveEmployees(inactiveList);
+
+    // Sort active first, inactive last
+    formatted.sort((a: Employee, b: Employee) => (a.status === b.status ? 0 : a.status ? -1 : 1));
 
     setEmployees(formatted);
     setLoading(false);
@@ -68,7 +109,8 @@ const EmployeeTable: React.FC<{ search: string; department: string; designation:
 
   useEffect(() => {
     fetchEmployees();
-  }, [userData, search, department,designation]); // ✅ refetch when filters change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData, search, department, designation, workLocation]);
 
   return (
     <div className="bg-white rounded-lg shadow-sm max-h-120 overflow-y-auto">
@@ -110,12 +152,11 @@ const EmployeeTable: React.FC<{ search: string; department: string; designation:
           )}
         </tbody>
       </table>
-         {/* ✅ Modal at parent level */}
       {selectedEmployee && (
         <EmployeeModal
           employee={selectedEmployee}
           onClose={() => setSelectedEmployee(null)}
-           onUpdated={() => {
+          onUpdated={() => {
             fetchEmployees();
             setSelectedEmployee(null);
           }}

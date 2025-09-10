@@ -28,36 +28,47 @@ serve(async (req) => {
     }
 
     if (action === "update") {
+      // Update user profile info
       if (updateData?.name || updateData?.number) {
-        await supabase
+        const { error: userError } = await supabase
           .from("users")
           .update({
             name: updateData.name,
             number: updateData.number,
           })
           .eq("id", userId);
+
+        if (userError) throw userError;
       }
-   if (updateData?.assets || updateData?.unique_assets) {
-  const { error: assetError } = await supabase
-    .from("asset_allocations")
-    .upsert(
-      {
-        user_id: userId,
-        company_id: updateData.company_id,
-        assets: updateData.assets || [],
-        unique_assets: updateData.unique_assets || null,
-        created_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" } // 👈 works only if user_id is unique
-    );
 
-  if (assetError) throw assetError;
-}
+      // Update asset allocations (one row per asset)
+      if (updateData?.assets?.length || updateData?.unique_assets) {
+        // Clear old allocations
+        const { error: delError } = await supabase
+          .from("asset_allocations")
+          .delete()
+          .eq("user_id", userId);
+
+        if (delError) throw delError;
+
+        // Insert new allocations
+        const newAllocations = updateData.assets.map((assetId: string) => ({
+  user_id: userId,
+  company_id: updateData.company_id,
+  asset_id: assetId,
+  unique_assets: updateData.unique_assets || null,
+  allocated_on: new Date().toISOString(), // ✅ use allocated_on
+}));
 
 
+        const { error: insertError } = await supabase
+          .from("asset_allocations")
+          .insert(newAllocations);
 
+        if (insertError) throw insertError;
+      }
 
-
+      // Update auth email/password
       if (updateData?.email || updateData?.password) {
         await supabase.auth.admin.updateUserById(userId, {
           email: updateData.email || undefined,
@@ -72,29 +83,16 @@ serve(async (req) => {
     }
 
     if (action === "delete") {
-      const { data: personal } = await supabase
-        .from("personal_details")
-        .select("documents")
-        .eq("id", userId)
-        .maybeSingle();
+      // Soft delete (mark inactive instead of hard delete)
+      const { error } = await supabase
+        .from("users")
+        .update({ is_active: false })
+        .eq("id", userId);
 
-      if (personal?.documents) {
-        const paths = personal.documents.map((doc: any) =>
-          decodeURIComponent(
-            doc.url.split("/storage/v1/object/public/usersdocuments/")[1],
-          )
-        );
-        if (paths.length > 0) {
-          await supabase.storage.from("usersdocuments").remove(paths);
-        }
-      }
-
-      await supabase.from("personal_details").delete().eq("id", userId);
-      await supabase.from("users").delete().eq("id", userId);
-      await supabase.auth.admin.deleteUser(userId);
+      if (error) throw error;
 
       return new Response(
-        JSON.stringify({ message: "User deleted successfully" }),
+        JSON.stringify({ message: "User marked as inactive successfully" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -103,7 +101,7 @@ serve(async (req) => {
       JSON.stringify({ error: "Invalid action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-  } catch (err) {
+  } catch (err: any) {
     console.error("Error:", err);
     return new Response(
       JSON.stringify({ error: err.message }),

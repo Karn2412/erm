@@ -169,63 +169,75 @@ const handleSubmit = async () => {
   }, []);
 
   return (
-    
-      
-      <div className="flex flex-col w-full">
-        {/* <StaffSidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      /> */}
-        {/* <Header /> */}
-        <main className="p-6 bg-blue-50">
-          <div className="bg-white p-4">
-            <SectionStepper
-              currentSection={currentSection}
-              onSectionChange={setCurrentSection}
+    <div className="flex flex-col w-full">
+      <main className="p-6 bg-blue-50">
+      <div className="bg-white p-4">
+        <SectionStepper
+          currentSection={currentSection}
+          onSectionChange={setCurrentSection}
+        />
+        <div className="bg-white p-6 rounded-2xl ">
+          {currentSection === 1 && (
+            <BasicDetailsForm
+              authId={userData?.id || userData?.auth_id || ""}
+              formData={basicDetails}
+              setFormData={setBasicDetails}
             />
-            <div className="bg-white p-6 rounded-2xl ">
-              {currentSection === 1 && (
-                <BasicDetailsForm
-                   authId={userData?.id || userData?.auth_id || ''}
-                  formData={basicDetails}
-                  setFormData={setBasicDetails}
-                />
-              )}
-              {currentSection === 2 && (
-                <BankingDetailsForm
-                  formData={bankingDetails}
-                  setFormData={setBankingDetails}
-                />
-              )}
-              {currentSection === 3 && (
-                <DocumentUploadForm
-                  formData={usersdocuments}
-                  setFormData={setDocuments}
-                   requiredDocs={[
-    "Cancelled Cheque / Bank Statement / Passbook Copy",
-    "PAN Card",
-    "Aadhar Card",
-    "Passport Photo", // 👈 you can add/remove here
-  ]}
-                />
-              )}
-            </div>
+          )}
+          {currentSection === 2 && (
+            <BankingDetailsForm
+              formData={bankingDetails}
+              setFormData={setBankingDetails}
+            />
+          )}
+          {currentSection === 3 && (
+            <DocumentUploadForm
+              formData={usersdocuments}
+              setFormData={setDocuments}
+              requiredDocs={[
+                "Cancelled Cheque / Bank Statement / Passbook Copy",
+                "PAN Card",
+                "Aadhar Card",
+                "Passport Photo",
+              ]}
+            />
+          )}
+        </div>
 
-            {currentSection === 3 && (
-              <div className="mt-6 text-right">
-                <button
-                  onClick={handleSubmit}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700"
-                >
-                  Submit Details
-                </button>
-              </div>
-            )}
-          </div>
-        </main>
+        {/* 🔹 Navigation Buttons */}
+        <div className="mt-6 flex justify-center gap-4">
+          {currentSection > 1 && (
+            <button
+              onClick={() => setCurrentSection((prev) => prev - 1)}
+              className="bg-gray-300 text-gray-700 px-6 py-2 rounded-full hover:bg-gray-400"
+            >
+              Back
+            </button>
+          )}
+          {currentSection < 3 && (
+            <button
+              onClick={() => setCurrentSection((prev) => prev + 1)}
+              className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700"
+            >
+              Next
+            </button>
+          )}
+          {currentSection === 3 && (
+            <button
+              onClick={handleSubmit}
+              className="bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700"
+            >
+              Submit Details
+            </button>
+          )}
+        </div>
       </div>
+    </main>
+  </div>
+);
+
     
-  );
+  
 };
 
 export default PersonalDetailsPage;

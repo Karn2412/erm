@@ -13,79 +13,69 @@ const AttendanceAndLeavePage: React.FC = () => {
   const [selectedDept, setSelectedDept] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedDesignation, setSelectedDesignation] = useState<string>("");
-  console.log(setSelectedDesignation);
 
-// 🔄 Load attendance from view
-const loadAttendance = async () => {
-  setLoading(true);
-  try {
-    // Get admin company_id
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const adminUserId = session?.user?.id;
-    if (!adminUserId) {
+  // 🔄 Load attendance from new unified view
+  const loadAttendance = async () => {
+    setLoading(true);
+    try {
+      // Get admin company_id
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const adminUserId = session?.user?.id;
+      if (!adminUserId) {
+        setAttendanceData([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data: adminData } = await supabase
+        .from("users")
+        .select("company_id")
+        .eq("id", adminUserId)
+        .single();
+
+      const companyId = adminData?.company_id;
+      if (!companyId) {
+        setAttendanceData([]);
+        setLoading(false);
+        return;
+      }
+
+      // ✅ Use the new merged view
+      const { data, error } = await supabase
+        .from("employee_attendance_summary")
+        .select("*")
+        .eq("company_id", companyId)
+        .eq("attendance_date", selectedDate);
+
+      if (error) throw error;
+
+      // Apply client-side filters
+      const filtered = data.filter((row: any) => {
+        const deptMatch = selectedDept ? row.department_id === selectedDept : true;
+        const desigMatch = selectedDesignation
+          ? row.designation_id === selectedDesignation
+          : true;
+        const searchMatch = searchQuery
+          ? row.employee_name.toLowerCase().includes(searchQuery.toLowerCase())
+          : true;
+        return deptMatch && desigMatch && searchMatch;
+      });
+
+      setAttendanceData(filtered);
+    } catch (err: any) {
+      console.error("Error loading attendance:", err.message);
       setAttendanceData([]);
+    } finally {
       setLoading(false);
-      return;
     }
+  };
 
-    const { data: adminData } = await supabase
-      .from("users")
-      .select("company_id")
-      .eq("id", adminUserId)
-      .single();
-
-    const companyId = adminData?.company_id;
-    if (!companyId) {
-      setAttendanceData([]);
-      setLoading(false);
-      return;
-    }
-
-    // Fetch attendance
-    const { data, error } = await supabase
-      .from("employee_attendance_with_requests")
-      .select("*")
-      .eq("company_id", companyId)
-      .eq("attendance_date", selectedDate);
-
-    if (error) throw error;
-
-    // Apply client-side filters
-    const filtered = data.filter((row: any) => {
-      const deptMatch = selectedDept ? row.department_id === selectedDept : true;
-      const desigMatch = selectedDesignation
-        ? row.designation_id === selectedDesignation
-        : true;
-      const searchMatch = searchQuery
-        ? row.employee_name.toLowerCase().includes(searchQuery.toLowerCase())
-        : true;
-      return deptMatch && desigMatch && searchMatch;
-    });
-
-    setAttendanceData(filtered);
-  } catch (err: any) {
-    console.error("Error loading attendance:", err.message);
-    setAttendanceData([]);
-  } finally {
-    setLoading(false);
-  }
-};
-
-// reload on any filter
-useEffect(() => {
-  loadAttendance();
-}, [selectedDate, selectedDept, selectedDesignation, searchQuery]);
-
-
-  // 🔄 Load attendance from view
-  ;
-
-  // 🔄 Reload on date / department / search change
+  // Reload on any filter change
   useEffect(() => {
     loadAttendance();
-  }, [selectedDate, selectedDept, searchQuery]);
+  }, [selectedDate, selectedDept, selectedDesignation, searchQuery]);
 
   return (
     <div className="flex">
@@ -96,7 +86,7 @@ useEffect(() => {
             onDateChange={setSelectedDate}
             onDepartmentChange={setSelectedDept}
             onSearchChange={setSearchQuery}
-             onDesignationChange={setSelectedDesignation} // ✅
+            onDesignationChange={setSelectedDesignation} // ✅
           />
           {loading ? (
             <div className="text-center mt-10 text-gray-500">

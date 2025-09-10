@@ -1,40 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-import AddEmployeeStepper from '../../components/adminEmployee/addemployee/AddEmployeeStepper';
-import AddEmployeeForm from '../../components/adminEmployee/addemployee/AddEmployeeForm';
-import SalaryDetails from '../../components/adminEmployee/addemployee/SalaryDetails';
-import AssetAllocationForm from '../../components/adminEmployee/addemployee/AssetAllocationForm';
-import PaymentInformationForm from '../../components/adminEmployee/addemployee/PaymentInformationForm';
+import AddEmployeeStepper from "../../components/adminEmployee/addemployee/AddEmployeeStepper";
+import AddEmployeeForm from "../../components/adminEmployee/addemployee/AddEmployeeForm";
+import SalaryDetails from "../../components/adminEmployee/addemployee/SalaryDetails";
+import AssetAllocationForm from "../../components/adminEmployee/addemployee/AssetAllocationForm";
+import PaymentInformationForm from "../../components/adminEmployee/addemployee/PaymentInformationForm";
 
 const AddEmployeePage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const navigate = useNavigate();
 
-  // Store IDs returned from Step 1
   const [employeeData, setEmployeeData] = useState({
-    userId: '',
-    companyId: '',
+    userId: "",
+    companyId: "",
   });
+
+  const markStepComplete = (step: number) => {
+    if (!completedSteps.includes(step)) {
+      setCompletedSteps((prev) => [...prev, step]);
+    }
+  };
 
   const handleEmployeeCreated = (userId: string, companyId: string) => {
     setEmployeeData({ userId, companyId });
-    setCurrentStep(2); // Auto-advance to Salary Details
+    markStepComplete(1);
+    setCurrentStep(2);
   };
 
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return (
-          <AddEmployeeForm
-            onEmployeeCreated={handleEmployeeCreated}
-          />
-        );
+        return <AddEmployeeForm onEmployeeCreated={handleEmployeeCreated} />;
 
       case 2:
         return (
           <SalaryDetails
             userId={employeeData.userId}
             companyId={employeeData.companyId}
-            onComplete={() => setCurrentStep(3)}   // ✅ move to Asset Allocation
+            onComplete={() => {
+              markStepComplete(2);
+              setCurrentStep(3);
+            }}
           />
         );
 
@@ -43,7 +51,10 @@ const AddEmployeePage: React.FC = () => {
           <AssetAllocationForm
             userId={employeeData.userId}
             companyId={employeeData.companyId}
-            onComplete={() => setCurrentStep(4)}   // ✅ move to Payment Info
+            onComplete={() => {
+              markStepComplete(3);
+              setCurrentStep(4);
+            }}
           />
         );
 
@@ -53,9 +64,9 @@ const AddEmployeePage: React.FC = () => {
             userId={employeeData.userId}
             companyId={employeeData.companyId}
             onComplete={() => {
-              alert('🎉 Employee fully added!');
-              // optionally reset form:
-              // setCurrentStep(1);
+              markStepComplete(4);
+              alert("🎉 Employee fully added!");
+              navigate("/employees"); // force exit only after completion
             }}
           />
         );
@@ -65,24 +76,90 @@ const AddEmployeePage: React.FC = () => {
     }
   };
 
+  const handleNext = () => {
+    if (currentStep < 4 && completedSteps.includes(currentStep)) {
+      setCurrentStep((prev) => prev + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep((prev) => prev - 1);
+    }
+  };
+
   return (
-    <div className="flex h-screen bg-gray-50 ">
-      <div className="flex flex-col flex-1 w-full ">
-        {/* Mobile header */}
-        <div className="md:hidden flex justify-between items-center bg-white p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold">Add Employee</h2>
-        </div>
+    <div className="flex h-screen bg-gray-50">
+      <div className="flex flex-col flex-1 w-full">
+        {/* Top Header with Back Button (only in Step 1) */}
+        {currentStep === 1 && (
+          <div className="flex items-center bg-gray-50 p-4">
+            <button
+              onClick={() => navigate("/employees")}
+              className="text-blue-600 hover:text-blue-800 font-medium"
+            >
+              ← Back
+            </button>
+          </div>
+        )}
 
         {/* Main Content */}
         <main className="p-6 space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm">
             <AddEmployeeStepper
-              onStepChange={(step) => setCurrentStep(step)}
               currentStep={currentStep}
+              // 🔒 remove free navigation
+              onStepChange={() => {}}
+              // disabledSteps={completedSteps}
             />
 
-            {/* Dynamic Step Form */}
             <div className="bg-white p-5 rounded-2xl">{renderStep()}</div>
+
+            {/* Back/Next Buttons */}
+            <div className="flex justify-between mt-6">
+              <button
+                onClick={handleBack}
+                disabled={currentStep === 1}
+                className={`px-4 py-2 rounded-lg ${
+                  currentStep === 1
+                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    : "bg-gray-500 text-white hover:bg-gray-600"
+                }`}
+              >
+                Back
+              </button>
+
+              {currentStep < 4 ? (
+                <button
+                  onClick={handleNext}
+                  disabled={!completedSteps.includes(currentStep)}
+                  className={`px-4 py-2 rounded-lg ${
+                    completedSteps.includes(currentStep)
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  }`}
+                >
+                  Next
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (completedSteps.includes(4)) {
+                      alert("🎉 Employee fully added!");
+                      navigate("/employees");
+                    }
+                  }}
+                  disabled={!completedSteps.includes(4)}
+                  className={`px-4 py-2 rounded-lg ${
+                    completedSteps.includes(4)
+                      ? "bg-green-600 text-white hover:bg-green-700"
+                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  }`}
+                >
+                  Finish
+                </button>
+              )}
+            </div>
           </div>
         </main>
       </div>

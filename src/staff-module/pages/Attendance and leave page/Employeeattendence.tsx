@@ -8,6 +8,7 @@ import AttendanceWeeklyTable from '../../components/Attendence and leave/Attenda
 import { supabase } from '../../../supabaseClient'
 import { useUser } from '../../../context/UserContext'
 import { format, endOfMonth, addDays, isAfter } from 'date-fns'
+import { FaMapMarkerAlt } from 'react-icons/fa'
 
 interface AttendanceRecord {
   day: string;
@@ -15,9 +16,19 @@ interface AttendanceRecord {
   hoursWorked: string;
   expectedHours: string;
   status: string;
-  checkInLocation: { lat: number; long: number } | null;
-  checkOutLocation: { lat: number; long: number } | null;
+  checkInLocation: { lat: number; long: number; time?: string } | null;
+  checkOutLocation: { lat: number; long: number; time?: string } | null;
+  requestType?: string;
+  requestStatus?: string;
+  isFuture?: boolean;
+  first_check_in_time?: string | null;
+  last_check_out_time?: string | null;
+  check_in_latitudes?: number[] | null;
+  check_in_longitudes?: number[] | null;
+  check_out_latitudes?: number[] | null;
+  check_out_longitudes?: number[] | null;
 }
+
 
 interface AttendanceRequest {
   id: string;
@@ -52,6 +63,7 @@ const EmployeeAttendancePage = () => {
   const getColorBorder = (status: string) => {
     switch (status) {
       case 'Checked In': return 'border-green-500';
+      case 'Checked Out': return 'border-purple-500';
       case 'Absent': return 'border-red-500';
       case 'Regularize': return 'border-orange-400';
       case 'Approved Off': return 'border-blue-500';
@@ -64,12 +76,13 @@ const EmployeeAttendancePage = () => {
   const getColorBg = (status: string) => {
     switch (status) {
       case 'Checked In': return 'bg-green-500';
+      case 'Checked Out': return 'bg-purple-500';
       case 'Absent': return 'bg-red-500';
       case 'Regularize': return 'bg-orange-400';
       case 'Approved Off': return 'bg-blue-500';
       case 'Leave': return 'bg-indigo-500';
       case 'WFH': return 'bg-purple-500';
-      case 'Incomplete': return 'bg-yellow-500';
+      case 'Incomplete': return 'bg-gray-500';
       default: return 'bg-gray-300';
     }
   };
@@ -136,6 +149,7 @@ const EmployeeAttendancePage = () => {
             status: 'Leave',
             checkInLocation: null,
             checkOutLocation: null,
+            
           });
           continue;
         }
@@ -152,23 +166,48 @@ const EmployeeAttendancePage = () => {
           continue;
         }
 
-        if (dbEntry) {
-          const worked = Number(dbEntry.total_worked_hours ?? 0);
-          const expected = Number(dbEntry.expected_hours ?? 0);
-          let status: string = dbEntry.attendance_statuses?.[0] || 'Absent';
-          const underHours = !isWeekend && !isFuture && expected > 0 && worked + 0.01 < expected;
-          if (underHours) status = 'Regularize';
+if (dbEntry) {
+  const worked = Number(dbEntry.total_worked_hours ?? 0);
+  const expected = Number(dbEntry.expected_hours ?? 0);
+  let status: string = dbEntry.attendance_statuses?.[0] || 'Absent';
+  const underHours = !isWeekend && !isFuture && expected > 0 && worked + 0.01 < expected;
+  if (underHours) status = 'Regularize';
 
-          transformed.push({
-            day: weekday,
-            date: dbEntry.attendance_date,
-            hoursWorked: worked.toFixed(2),
-            expectedHours: expected.toFixed(2),
-            status,
-            checkInLocation: null,
-            checkOutLocation: null,
-          });
-        } else {
+  // raw fields from the view (pass them as-is)
+  const rawFirst = dbEntry.first_check_in_time ?? null;
+  const rawLast = dbEntry.last_check_out_time ?? null;
+
+  // safe pick for first/last lat/long for friendly object
+  const firstInLat = dbEntry.check_in_latitudes?.[0] ?? null;
+  const firstInLong = dbEntry.check_in_longitudes?.[0] ?? null;
+  const lastOutIndex = (dbEntry.check_out_latitudes?.length ?? 0) - 1;
+  const lastOutLat = lastOutIndex >= 0 ? dbEntry.check_out_latitudes?.[lastOutIndex] ?? null : null;
+  const lastOutLong = lastOutIndex >= 0 ? dbEntry.check_out_longitudes?.[lastOutIndex] ?? null : null;
+
+  transformed.push({
+    day: weekday,
+    date: dbEntry.attendance_date,
+    hoursWorked: worked.toFixed(2),
+    expectedHours: expected.toFixed(2),
+    status,
+
+    // <-- raw snake_case fields required by AttendanceWeeklyTable (unmodified) -->
+    first_check_in_time: rawFirst,
+    last_check_out_time: rawLast,
+    check_in_latitudes: dbEntry.check_in_latitudes ?? null,
+    check_in_longitudes: dbEntry.check_in_longitudes ?? null,
+    check_out_latitudes: dbEntry.check_out_latitudes ?? null,
+    check_out_longitudes: dbEntry.check_out_longitudes ?? null,
+
+    // <-- friendly shaped objects you already used elsewhere -->
+    checkInLocation: rawFirst
+      ? { lat: firstInLat, long: firstInLong, time: new Date(rawFirst).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+      : null,
+    checkOutLocation: rawLast
+      ? { lat: lastOutLat, long: lastOutLong, time: new Date(rawLast).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+      : null,
+  } as any);
+} else {
           const status = isWeekend ? (isFuture ? 'Incomplete' : 'Approved Off') : (isFuture ? 'Incomplete' : 'Absent');
           transformed.push({
             day: weekday,
@@ -176,6 +215,7 @@ const EmployeeAttendancePage = () => {
             hoursWorked: '0.00',
             expectedHours: '0.00',
             status,
+            
             checkInLocation: null,
             checkOutLocation: null,
           });
@@ -289,51 +329,135 @@ const EmployeeAttendancePage = () => {
                   onRegularize={(date) => setRegularizeDate(date)}
                 />
               ) : (
-                <>
-                <div className='p-6  bg-gray-50 rounded-2xl '>
-                    <div className="grid grid-cols-7 text-center text-sm font-semibold  text-gray-500 mb-4">
-                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-                      <div key={day}>{day}</div>
-                    ))}
-                  </div>
+                <div className="grid grid-cols-7 gap-3">
+  {(() => {
+    const firstDay = new Date(selectedYear, selectedMonth, 1);
+    const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+    const firstDayIndex = (firstDay.getDay() + 6) % 7; // Monday start
 
-                  <div className="grid grid-cols-7 gap-3">
-                    {(() => {
-                      const firstDay = new Date(selectedYear, selectedMonth, 1)
-                      const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate()
-                      const firstDayIndex = (firstDay.getDay() + 6) % 7
+    const calendarDays = [];
+    for (let i = 0; i < firstDayIndex; i++) {
+      calendarDays.push(<div key={`empty-${i}`} />);
+    }
 
-                      const calendarDays = []
-                      for (let i = 0; i < firstDayIndex; i++) calendarDays.push(<div key={`empty-${i}`} />)
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(selectedYear, selectedMonth, day);
+      const formatted = format(date, "yyyy-MM-dd");
+      const found = attendanceData.find((d) => d.date === formatted);
+      const isFuture = date > today;
+      const weekday = date.toLocaleDateString("en-US", { weekday: "long" });
+      const isWeekend = weekday === "Saturday" || weekday === "Sunday";
 
-                      for (let day = 1; day <= daysInMonth; day++) {
-                        const date = new Date(selectedYear, selectedMonth, day)
-                        const formatted = format(date, 'yyyy-MM-dd')
-                        const found = attendanceData.find(d => d.date === formatted)
-                        const isFuture = date > today
-                        const weekday = date.toLocaleDateString('en-US', { weekday: 'long' })
-                        const isWeekend = weekday === 'Saturday' || weekday === 'Sunday'
-                        let status = found ? found.status : isWeekend ? (isFuture ? 'Incomplete' : 'Approved Off') : (isFuture ? 'Incomplete' : 'Absent')
+      // Resolve status (prefer found.status, but keep weekend/future rules)
+      let status: string;
+      if (found) {
+        if (isWeekend) status = "Approved Off";
+        else if (isFuture) status = "Incomplete";
+        else status = found.status;
+      } else {
+        status = isWeekend ? "Approved Off" : isFuture ? "Incomplete" : "Absent";
+      }
 
-                        calendarDays.push(
-                          <div key={formatted} className={`rounded-xl border ${getColorBorder(status)} shadow-sm hover:shadow-md flex flex-col justify-between h-24`}>
-                            <div className="flex justify-between px-2 pt-2 text-sm font-medium text-gray-800">
-                              <span>{day}</span>
-                              <span className="text-xs text-gray-500">
-                                {found?.checkInLocation ? 'IN' : ''} {found?.checkOutLocation ? 'OUT' : ''}
-                              </span>
-                            </div>
-                            <div className={`text-[13px] rounded-b-xl font-semibold text-white text-center py-1 ${getColorBg(status)}`}>
-                              {status}
-                            </div>
-                          </div>
-                        )
-                      }
-                      return calendarDays
-                    })()}
-                  </div>
-                </div>
-                </>
+      // ---- Resolve times and lat/long (support both shapes) ----
+      const ciTime =
+        found?.checkInLocation?.time ??
+        (found?.first_check_in_time ? new Date(found.first_check_in_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null);
+      const coTime =
+        found?.checkOutLocation?.time ??
+        (found?.last_check_out_time ? new Date(found.last_check_out_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null);
+
+      const ciLat = found?.checkInLocation?.lat ?? found?.check_in_latitudes?.[0] ?? null;
+      const ciLong = found?.checkInLocation?.long ?? found?.check_in_longitudes?.[0] ?? null;
+
+      // pick last element for check-out arrays if available
+      const coLat =
+        found?.checkOutLocation?.lat ??
+        (found?.check_out_latitudes?.length ? found.check_out_latitudes[found.check_out_latitudes.length - 1] : null) ??
+        null;
+      const coLong =
+        found?.checkOutLocation?.long ??
+        (found?.check_out_longitudes?.length ? found.check_out_longitudes[found.check_out_longitudes.length - 1] : null) ??
+        null;
+
+      // small helpers
+      const mapLink = (lat: number | null, long: number | null) =>
+        lat != null && long != null ? `https://www.google.com/maps?q=${lat},${long}` : null;
+
+      calendarDays.push(
+        <div
+          key={formatted}
+          className={`relative rounded-xl border ${getColorBorder(status)} shadow-sm hover:shadow-md flex flex-col justify-between h-28 bg-white`}
+        >
+          {/* Top row: date + times */}
+          <div className="flex justify-between px-2 pt-2 text-sm font-medium text-gray-800">
+            <span>{day}</span>
+
+            <div className="flex gap-2 items-center">
+              {/* Check-in */}
+              {!isFuture && ciTime ? (
+                mapLink(ciLat, ciLong) ? (
+                  <a
+                    href={mapLink(ciLat, ciLong)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs text-gray-600"
+                    title={`Check-in: ${ciLat?.toFixed?.(4)}, ${ciLong?.toFixed?.(4)}`}
+                  >
+                    <FaMapMarkerAlt className="text-red-500" />
+                    <span>{ciTime}</span>
+                  </a>
+                ) : (
+                  <span className="flex items-center gap-1 text-xs text-gray-600">
+                    <FaMapMarkerAlt className="text-red-500" />
+                    <span>{ciTime}</span>
+                  </span>
+                )
+              ) : null}
+
+              {/* Check-out */}
+              {!isFuture && coTime ? (
+                mapLink(coLat, coLong) ? (
+                  <a
+                    href={mapLink(coLat, coLong)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs text-gray-600"
+                    title={`Check-out: ${coLat?.toFixed?.(4)}, ${coLong?.toFixed?.(4)}`}
+                  >
+                    <FaMapMarkerAlt className="text-green-500" />
+                    <span>{coTime}</span>
+                  </a>
+                ) : (
+                  <span className="flex items-center gap-1 text-xs text-gray-600">
+                    <FaMapMarkerAlt className="text-green-500" />
+                    <span>{coTime}</span>
+                  </span>
+                )
+              ) : null}
+            </div>
+          </div>
+
+          {/* optional middle: show worked hours if you want */}
+          {/* <div className="text-center text-xs px-2">
+            {!isFuture && found?.hoursWorked && found.hoursWorked !== "0.00"
+              ? `${found.hoursWorked} / ${found.expectedHours} hrs`
+              : isFuture
+              ? `${found?.expectedHours ?? "0.00"} hrs expected`
+              : null}
+          </div> */}
+
+          {/* Status footer */}
+          <div className={`text-[13px] rounded-b-xl font-semibold text-white text-center py-1 ${getColorBg(status)}`}>
+            {status}
+          </div>
+        </div>
+      );
+    }
+
+    return calendarDays;
+  })()}
+</div>
+
               )}
             </div>
           </div>

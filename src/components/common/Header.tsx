@@ -12,10 +12,31 @@ const Header = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [requests, setRequests] = useState<any[]>([]);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
   const dropdownRef = useRef(null);
 
   const hideSearchBarRoutes = ["/employees"];
   const shouldHideSearchBar = hideSearchBarRoutes.includes(location.pathname);
+
+  // ✅ Fetch avatar directly here
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      if (!userData?.auth_id) return;
+
+      const { data, error } = await supabase
+        .from("user_with_email")
+        .select("gender_avatar")
+        .eq("auth_id", userData.auth_id)
+        .single();
+
+      if (!error && data) {
+        setAvatarUrl(data.gender_avatar);
+      }
+    };
+
+    fetchAvatar();
+  }, [userData?.auth_id]);
 
   // Logout
   const handleLogout = async () => {
@@ -27,6 +48,18 @@ const Header = () => {
   };
 
   // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: any) => {
+      if (dropdownRef.current && !(dropdownRef.current as any).contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+
+
   useEffect(() => {
     const handleClickOutside = (event: any) => {
       if (dropdownRef.current && !(dropdownRef.current as any).contains(event.target)) {
@@ -174,41 +207,46 @@ const Header = () => {
 
         {/* Profile */}
         <div className="relative" ref={dropdownRef}>
-          <div
-            className="flex items-center space-x-2 cursor-pointer bg-white px-3 py-1 rounded-full shadow-sm"
-            onClick={() => setDropdownOpen((prev) => !prev)}
-          >
-            <img
-              src="https://www.pngplay.com/wp-content/uploads/12/User-Avatar-Profile-Transparent-Free-PNG-Clip-Art.png"
+  <div
+    className="flex items-center space-x-2 cursor-pointer bg-white px-3 py-1 rounded-full shadow-sm"
+    onClick={() => setDropdownOpen((prev) => !prev)}
+  >
+    <img
+              src={
+                avatarUrl ||
+                "https://www.pngplay.com/wp-content/uploads/12/User-Avatar-Profile-Transparent-Free-PNG-Clip-Art.png"
+              }
               alt="Profile"
               className="rounded-full w-[32px] h-[32px]"
             />
-            <div className="text-sm">
-              <p className="font-medium text-gray-800">
-                {userData?.name || "Loading..."}
-              </p>
-              <p className="text-xs text-gray-500">
-                {userData?.role || "User"}
-              </p>
-            </div>
-          </div>
 
-          {dropdownOpen && (
-            <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded shadow-md z-10">
-              <button
-                onClick={handleLogout}
-                className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-              >
-                Logout
-              </button>
-            </div>
-          )}
-        </div>
+    <div className="text-sm">
+      <p className="font-medium text-gray-800">
+        {userData?.name || "Loading..."}
+      </p>
+      <p className="text-xs text-gray-500">
+        {userData?.role || "User"}
+      </p>
+    </div>
+  </div>
+
+  {dropdownOpen && (
+    <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded shadow-md z-10">
+      <button
+        onClick={handleLogout}
+        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+      >
+        Logout
+      </button>
+    </div>
+  )}
+</div>
+
       </div>
 
       {/* Notification Modal */}
       {showNotifModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-start pt-20 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-start pt-20 z-50" style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
           <div className="bg-white rounded-lg shadow-lg w-[400px] max-h-[500px] overflow-y-auto">
             {/* Header */}
             <div className="flex justify-between items-center border-b px-4 py-2">
@@ -266,3 +304,4 @@ const Header = () => {
 };
 
 export default Header;
+ 

@@ -23,7 +23,7 @@ const AttendanceChartCard: React.FC<Props> = () => {
       const endOfMonth = dayjs().endOf("month").format("YYYY-MM-DD");
 
       const { data, error } = await supabase
-        .from("employee_attendance_with_requests")
+        .from("employee_attendance_summary")
         .select("attendance_date, attendance_statuses")
         .eq("user_id", userData.id)
         .gte("attendance_date", startOfMonth)

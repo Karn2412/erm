@@ -75,7 +75,7 @@ const WorkRequestCard: React.FC = () => {
         <div className="flex flex-col space-y-4">
   <button
     onClick={() => setShowWFHModal(true)}
-    className="flex items-center justify-start space-x-2 w-48 bg-blue-900 text-white text-xs font-medium px-4 py-2 rounded-lg"
+    className="flex items-center justify-start space-x-2 w-48 bg-blue-900 hover:bg-blue-800 text-white text-xs font-medium px-4 py-2 rounded-lg"
   >
     <FiHome className="text-xl" />
     <span>Work From Home Request</span>
@@ -83,7 +83,7 @@ const WorkRequestCard: React.FC = () => {
 
   <button
     onClick={() => setShowLeaveModal(true)}
-    className="flex items-center justify-start space-x-2 w-48 bg-blue-500 text-white text-xs font-medium px-4 py-2 rounded-lg"
+    className="flex items-center justify-start space-x-2 w-48 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium px-4 py-2 rounded-lg"
   >
     <BiCalendarCheck className="text-xl" />
     <span>Leave Request</span>
@@ -91,7 +91,7 @@ const WorkRequestCard: React.FC = () => {
 
   <button
     onClick={() => setShowModal(true)}
-    className="flex items-center justify-start space-x-2 w-48 bg-orange-500 text-white text-xs font-medium px-4 py-2 rounded-lg"
+    className="flex items-center justify-start space-x-2 w-48 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium px-4 py-2 rounded-lg"
   >
     <MdOutlineAccessTime className="text-xl" />
     <span>Regularize</span>

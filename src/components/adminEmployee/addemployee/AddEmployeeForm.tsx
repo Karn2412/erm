@@ -5,7 +5,9 @@ interface AddEmployeeFormProps {
   onEmployeeCreated: (userId: string, companyId: string) => void;
 }
 
-const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeCreated }) => {
+const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
+  onEmployeeCreated,
+}) => {
   const [formData, setFormData] = useState({
     firstName: "",
     middleName: "",
@@ -20,27 +22,37 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeCreated }) 
     role_name: "staff",
     work_start: "",
     work_end: "",
+    work_location: "",
   });
 
-  const [departments, setDepartments] = useState<{ id: string; department_name: string }[]>([]);
+  const [departments, setDepartments] = useState<
+    { id: string; department_name: string }[]
+  >([]);
   const [genders, setGenders] = useState<{ id: string; type: string }[]>([]);
-  const [designations, setDesignations] = useState<{ id: string; designation: string }[]>([]);
+  const [designations, setDesignations] = useState<
+    { id: string; designation: string }[]
+  >([]);
+  const [workLocations, setWorkLocations] = useState<any[]>([]);
+  console.log("workLocations>>>>>>>>>>>>", workLocations);
 
-useEffect(() => {
-  const fetchDesignations = async () => {
-    const { data, error } = await supabase.from("designations").select("id, designation");
-    if (!error && data) {
-      setDesignations(data);
-    }
-  };
-  fetchDesignations();
-}, []);
-
+  useEffect(() => {
+    const fetchDesignations = async () => {
+      const { data, error } = await supabase
+        .from("designations")
+        .select("id, designation");
+      if (!error && data) {
+        setDesignations(data);
+      }
+    };
+    fetchDesignations();
+  }, []);
 
   // ✅ Fetch departments for current admin’s company
   useEffect(() => {
     const fetchDepartments = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data: roleRecord } = await supabase
@@ -62,6 +74,36 @@ useEffect(() => {
     };
 
     fetchDepartments();
+  }, []);
+  // ✅ Fetch work locations for current admin’s company
+  const fetchWorkLocations = async () => {
+    // 1. Get logged in user
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // 2. Get company_id from user_roles
+    const { data: roleRecord, error: roleError } = await supabase
+      .from("user_roles")
+      .select("company_id")
+      .eq("id", user.id) // 👈 make sure this matches your user_roles schema (might be user_id instead of id)
+      .single();
+
+    if (roleError || !roleRecord) return;
+
+    // 3. Fetch work locations for that company
+    const { data, error } = await supabase
+      .from("work_locations")
+      .select("id, name")
+      .eq("company_id", roleRecord.company_id);
+
+    if (!error && data) {
+      setWorkLocations(data);
+    }
+  };
+  useEffect(() => {
+    fetchWorkLocations();
   }, []);
 
   // ✅ Fetch genders list
@@ -114,11 +156,13 @@ useEffect(() => {
         return;
       }
 
-
       const accessToken = session.access_token;
 
       // Get current logged-in user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
       if (userError || !user) {
         alert("Failed to get current user.");
         return;
@@ -135,29 +179,28 @@ useEffect(() => {
         alert("User role not found.");
         return;
       }
-      
-      
-      
 
       const companyId = roleRecord.company_id;
-      const fullName = `${formData.firstName} ${formData.middleName} ${formData.lastName}`.trim();
+      const fullName =
+        `${formData.firstName} ${formData.middleName} ${formData.lastName}`.trim();
       const formattedDate = new Date(formData.dateOfJoining)
         .toISOString()
         .split("T")[0];
 
       const requestBody = {
-        email: formData.email,
-        password: formData.password,
-        name: fullName,
-        number: formData.number,
-        gender_id: formData.gender_id, // ✅ send gender_id
-        date_of_joining: formattedDate,
-        designation_id: formData.designation_id,
-        
-        department_id: formData.department_id,
-        company_id: companyId,
-        role_name: formData.role_name,
-      };
+  email: formData.email,
+  password: formData.password,
+  name: fullName,
+  number: formData.number,
+  gender_id: formData.gender_id,
+  date_of_joining: formattedDate,
+  designation_id: formData.designation_id,
+  department_id: formData.department_id,
+  company_id: companyId,
+  role_name: formData.role_name,
+  work_location: formData.work_location, // ✅ send selected location
+};
+
 
       // Helper function to convert HH:mm to seconds
       const timeToSeconds = (timeStr: string) => {
@@ -166,7 +209,7 @@ useEffect(() => {
         return hours * 3600 + minutes * 60;
       };
 
-      console.log("requestBody>>>>>>>>>>>>>",requestBody);
+      console.log("requestBody>>>>>>>>>>>>>", requestBody);
 
       // Call Edge Function
       const response = await fetch(
@@ -227,6 +270,7 @@ useEffect(() => {
           role_name: "staff",
           work_start: "",
           work_end: "",
+          work_location: "",
         });
       }
     } catch (err: any) {
@@ -317,52 +361,60 @@ useEffect(() => {
         </div>
 
         <div className="flex items-start space-x-2">
-  <input
-    id="isDirector"
-    type="checkbox"
-    className="mt-1 h-5 w-5 rounded-md border-2 border-blue-400 text-blue-600 focus:ring-2 focus:ring-blue-300 cursor-pointer"
-  />
-  <label htmlFor="isDirector" className="text-sm text-gray-700 cursor-pointer">
-    Employee is a director/person with substantial interest in the company.
-  </label>
-</div>
+          <input
+            id="isDirector"
+            type="checkbox"
+            className="mt-1 h-5 w-5 rounded-md border-2 border-blue-400 text-blue-600 focus:ring-2 focus:ring-blue-300 cursor-pointer"
+          />
+          <label
+            htmlFor="isDirector"
+            className="text-sm text-gray-700 cursor-pointer"
+          >
+            Employee is a director/person with substantial interest in the
+            company.
+          </label>
+        </div>
 
         {/* Gender & Mobile */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-2">
           <div>
-  <label className="block text-sm font-medium text-gray-700 mb-2">
-    Gender <span className="text-red-500">*</span>
-  </label>
-  <div className="relative w-3/4">
-    <select
-      name="gender_id"
-      value={formData.gender_id}
-      onChange={handleChange}
-      className="w-full appearance-none px-3 py-2 border border-blue-400 rounded-full bg-white pr-10"
-    >
-      <option value="">Select Gender</option>
-      {genders.map((g) => (
-        <option key={g.id} value={g.id}>
-          {g.type}
-        </option>
-      ))}
-    </select>
-    {/* Dropdown Arrow with Circle */}
-    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-      <div className="w-6 h-6 rounded-full border border-blue-400 flex items-center justify-center bg-blue-50">
-        <svg
-          className="w-3 h-3 text-blue-500"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </div>
-    </div>
-  </div>
-</div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Gender <span className="text-red-500">*</span>
+            </label>
+            <div className="relative w-3/4">
+              <select
+                name="gender_id"
+                value={formData.gender_id}
+                onChange={handleChange}
+                className="w-full appearance-none px-3 py-2 border border-blue-400 rounded-full bg-white pr-10"
+              >
+                <option value="">Select Gender</option>
+                {genders.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.type}
+                  </option>
+                ))}
+              </select>
+              {/* Dropdown Arrow with Circle */}
+              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                <div className="w-6 h-6 rounded-full border border-blue-400 flex items-center justify-center bg-blue-50">
+                  <svg
+                    className="w-3 h-3 text-blue-500"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -382,82 +434,143 @@ useEffect(() => {
         {/* Designation & Department */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-2">
           <div>
-           <label className="block text-sm font-medium text-gray-700 mb-2">
-  Designation <span className="text-red-500">*</span>
-</label>
-<div className="relative w-3/4">
-  <select
-    name="designation_id"
-    value={formData.designation_id}
-    onChange={handleChange}
-    className="w-full appearance-none px-3 py-2 border border-blue-400 rounded-full bg-white pr-10"
-  >
-    <option value="">Select Designation</option>
-    {designations.map((d) => (
-      <option key={d.id} value={d.id}>
-        {d.designation}
-      </option>
-    ))}
-  </select>
-</div>
-
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Designation <span className="text-red-500">*</span>
+            </label>
+            <div className="relative w-3/4">
+              <select
+                name="designation_id"
+                value={formData.designation_id}
+                onChange={handleChange}
+                className="w-full appearance-none px-3 py-2 border border-blue-400 rounded-full bg-white pr-10"
+              >
+                <option value="">Select Designation</option>
+                {designations.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.designation}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div>
-  <label className="block text-sm font-medium text-gray-700 mb-2">
-    Department <span className="text-red-500">*</span>
-  </label>
-  <div className="relative w-3/4">
-    <select
-      name="department_id"
-      value={formData.department_id}
-      onChange={handleChange}
-      required
-      className="w-full appearance-none px-3 py-2 border border-blue-400 rounded-full bg-white pr-10"
-    >
-      <option value="">Select Department</option>
-      {departments.map((dept) => (
-        <option key={dept.id} value={dept.id}>
-          {dept.department_name}
-        </option>
-      ))}
-    </select>
-    {/* Dropdown Arrow with Circle */}
-    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-      <div className="w-6 h-6 rounded-full border border-blue-400 flex items-center justify-center bg-blue-50">
-        <svg
-          className="w-3 h-3 text-blue-500"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </div>
-    </div>
-  </div>
-</div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Department <span className="text-red-500">*</span>
+            </label>
+            <div className="relative w-3/4">
+              <select
+                name="department_id"
+                value={formData.department_id}
+                onChange={handleChange}
+                required
+                className="w-full appearance-none px-3 py-2 border border-blue-400 rounded-full bg-white pr-10"
+              >
+                <option value="">Select Department</option>
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.id}>
+                    {dept.department_name}
+                  </option>
+                ))}
+              </select>
+              {/* Dropdown Arrow with Circle */}
+              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                <div className="w-6 h-6 rounded-full border border-blue-400 flex items-center justify-center bg-blue-50">
+                  <svg
+                    className="w-3 h-3 text-blue-500"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Role Selection */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Role <span className="text-red-500">*</span>
-          </label>
-          <select
-  name="role_name"
-  value={formData.role_name}
-  onChange={handleChange}
-  className="w-3/4 px-3 py-2 border border-blue-400 rounded-full bg-white appearance-none pr-10
-             [background-image:linear-gradient(45deg,transparent 50%,#2563eb 50%),linear-gradient(135deg,#2563eb 50%,transparent 50%)]
-             [background-position:calc(100%-20px) calc(1em+2px),calc(100%-15px) calc(1em+2px)]
-             [background-size:5px 5px,5px 5px]
-             [background-repeat:no-repeat]"
->
-  <option value="staff">Staff</option>
-  <option value="admin">Admin</option>
-</select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-2">
+          {/* Role */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Role <span className="text-red-500">*</span>
+            </label>
+            <div className="relative w-3/4">
+              <select
+                name="role_name"
+                value={formData.role_name}
+                onChange={handleChange}
+                className="w-full appearance-none px-3 py-2 border border-blue-400 rounded-full bg-white pr-10"
+              >
+                <option value="staff">Staff</option>
+                <option value="admin">Admin</option>
+              </select>
+              {/* Dropdown Arrow with Circle */}
+              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                <div className="w-6 h-6 rounded-full border border-blue-400 flex items-center justify-center bg-blue-50">
+                  <svg
+                    className="w-3 h-3 text-blue-500"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
 
+          {/* Work Location */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Work Location <span className="text-red-500">*</span>
+            </label>
+            <div className="relative w-3/4">
+              <select
+                name="work_location"
+                value={formData.work_location}
+                onChange={handleChange}
+                className="w-full appearance-none px-3 py-2 border border-blue-400 rounded-full bg-white pr-10"
+              >
+                <option value="">Select Location</option>
+                {workLocations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
+              {/* Dropdown Arrow with Circle */}
+              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                <div className="w-6 h-6 rounded-full border border-blue-400 flex items-center justify-center bg-blue-50">
+                  <svg
+                    className="w-3 h-3 text-blue-500"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Work Hours */}
@@ -489,20 +602,23 @@ useEffect(() => {
         </div>
 
         {/* Enable Portal Access Checkbox */}
-<div className="flex items-start space-x-2 mt-3">
-  <input
-    id="portalAccess"
-    type="checkbox"
-    className="mt-1 h-5 w-5 rounded-md border-2 border-blue-400 text-blue-600 focus:ring-2 focus:ring-blue-300 cursor-pointer"
-  />
-  <label htmlFor="portalAccess" className="text-sm text-gray-700 cursor-pointer">
-    Enable Portal Access <br />
-    <span className="text-xs text-gray-500">
-      The employee will be able to view payslips, submit their IT declaration,
-      create reimbursement claims and so on.
-    </span>
-  </label>
-</div>
+        <div className="flex items-start space-x-2 mt-3">
+          <input
+            id="portalAccess"
+            type="checkbox"
+            className="mt-1 h-5 w-5 rounded-md border-2 border-blue-400 text-blue-600 focus:ring-2 focus:ring-blue-300 cursor-pointer"
+          />
+          <label
+            htmlFor="portalAccess"
+            className="text-sm text-gray-700 cursor-pointer"
+          >
+            Enable Portal Access <br />
+            <span className="text-xs text-gray-500">
+              The employee will be able to view payslips, submit their IT
+              declaration, create reimbursement claims and so on.
+            </span>
+          </label>
+        </div>
 
         {/* Submit */}
         <div className="pt-4">

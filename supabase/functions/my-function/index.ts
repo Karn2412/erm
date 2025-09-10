@@ -63,7 +63,7 @@ serve(async (req) => {
 
     // ✅ Parse Request Body
     const body = await req.json();
-    const { email, password, name, number, role_name, gender_id, department_id, designation_id } = body;
+    const { email, password, name, number, role_name, gender_id, department_id, designation_id, work_location } = body;
 
     if (!designation_id) {
   return withCors(new Response(JSON.stringify({ error: "designation_id is required" }), { status: 400 }));
@@ -82,6 +82,27 @@ serve(async (req) => {
     if (!department_id) {
       return withCors(new Response(JSON.stringify({ error: "department_id is required" }), { status: 400 }));
     }
+
+    if (!work_location) {
+  return withCors(new Response(JSON.stringify({ error: "work_location is required" }), { status: 400 }));
+}
+
+
+// ✅ Check if work_location belongs to same company
+const { data: locationData, error: locationError } = await supabase
+  .from("work_locations")
+  .select("id, company_id")
+  .eq("id", work_location)
+  .single();
+
+if (locationError || !locationData) {
+  return withCors(new Response(JSON.stringify({ error: "Invalid work_location", details: locationError?.message }), { status: 400 }));
+}
+
+if (locationData.company_id !== adminCompanyId) {
+  return withCors(new Response(JSON.stringify({ error: "Location does not belong to your company" }), { status: 403 }));
+}
+
 
     // ✅ Create Auth User
     const { data: userData, error: userError } = await supabase.auth.admin.createUser({
@@ -107,6 +128,7 @@ serve(async (req) => {
         gender_id,
         department_id,
         designation_id,
+        location_id: work_location,
       },
     ]);
 

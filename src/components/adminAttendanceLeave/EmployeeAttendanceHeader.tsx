@@ -1,6 +1,7 @@
 import React, { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import RequestsModal from "./attendencemodal/RequestsModal";
 import { supabase } from "../../supabaseClient";
+import { useNavigate } from "react-router-dom";
 
 interface EmployeeAttendanceHeaderProps {
   viewMode: "weekly" | "monthly";
@@ -23,6 +24,7 @@ const EmployeeAttendanceHeader: React.FC<EmployeeAttendanceHeaderProps> = ({
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const navigate = useNavigate();
 
   // Fetch pending requests count
   useEffect(() => {
@@ -43,6 +45,14 @@ const EmployeeAttendanceHeader: React.FC<EmployeeAttendanceHeaderProps> = ({
 
   return (
     <div>
+      {/* 🔙 Back Button */}
+      <button
+        onClick={() => navigate("/attendance")}
+        className="flex items-center text-sm text-blue-600 hover:text-blue-800 mb-4"
+      >
+        <span className="mr-1">←</span> Back
+      </button>
+
       {/* Heading + Switch + Legend */}
       <div className="flex flex-wrap items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Employee Attendance</h2>

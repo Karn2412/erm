@@ -7,6 +7,11 @@ const EmployeesPage: React.FC = () => {
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState("");
   const [designation, setDesignation] = useState("");
+  const [workLocation, setWorkLocation] = useState("");
+  const [activeEmployees, setActiveEmployees] = useState<any[]>([]);
+  const [inactiveEmployees, setInactiveEmployees] = useState<any[]>([]);
+
+  
 
   return (
     <div className="flex h-screen bg-gray-100 ">
@@ -19,11 +24,28 @@ const EmployeesPage: React.FC = () => {
             </div>
 
             <div className="mb-4">
-              <EmployeeFilters department={department} setDepartment={setDepartment} designation={designation} setDesignation={setDesignation} />
+              <EmployeeFilters
+                department={department}
+                setDepartment={setDepartment}
+                designation={designation}
+                setDesignation={setDesignation}
+                workLocation={workLocation}
+                setWorkLocation={setWorkLocation}
+                activeEmployees={activeEmployees}
+                inactiveEmployees={inactiveEmployees}
+                setSearch={setSearch}
+              />
             </div>
 
             <div className="overflow-auto">
-              <EmployeeTable search={search} department={department} designation={designation} />
+              <EmployeeTable
+                search={search}
+                department={department}
+                designation={designation}
+                workLocation={workLocation}
+                setActiveEmployees={setActiveEmployees}
+                setInactiveEmployees={setInactiveEmployees}
+              />
             </div>
           </div>
         </main>

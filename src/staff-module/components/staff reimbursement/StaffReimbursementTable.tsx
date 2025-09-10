@@ -63,7 +63,30 @@ const ReimbursementTable: React.FC<Props> = ({ refresh }) => {
     );
 
     setData(withUrls);
+
+
   }
+
+  // Add functions above return()
+const handleEdit = (item: Reimbursement) => {
+  console.log("Editing reimbursement:", item);
+  // 👉 Here you can open a modal or form pre-filled with item data
+};
+
+const handleDelete = async (id: string) => {
+  if (!confirm("Are you sure you want to delete this reimbursement?")) return;
+
+  const { error } = await supabase.from("reimbursements").delete().eq("id", id);
+
+  if (error) {
+    console.error("❌ Error deleting reimbursement", error);
+    return;
+  }
+
+  // Refresh the list
+  fetchData();
+};
+
 
   useEffect(() => {
     fetchData();
@@ -84,7 +107,7 @@ const ReimbursementTable: React.FC<Props> = ({ refresh }) => {
         } text-xs font-semibold text-gray-600 px-4 py-2`}
       >
         <div>Sl no</div>
-        <div>Type of Reimbursement</div>
+        <div>Type</div>
         <div>Expense Date</div>
         <div>Description</div>
         <div>Amount</div>
@@ -118,7 +141,7 @@ const ReimbursementTable: React.FC<Props> = ({ refresh }) => {
                     href={item.proofUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-2 bg-blue-100 px-3 py-1 rounded-lg text-blue-700 hover:bg-blue-200"
+                    className="inline-flex items-center gap-1 border border-blue-400 px-2 py-1 rounded-md text-blue-700 hover:bg-blue-50"
                   >
                     View <FaEye />
                   </a>
@@ -130,24 +153,31 @@ const ReimbursementTable: React.FC<Props> = ({ refresh }) => {
                 {item.status}
               </div>
 
-              {hasPending && (
-                <>
-                  <div>
-                    {showActions && (
-                      <button className="px-3 py-1 text-xs rounded-full bg-yellow-200 hover:bg-yellow-300 text-yellow-800">
-                        Edit
-                      </button>
-                    )}
-                  </div>
-                  <div>
-                    {showActions && (
-                      <button className="px-3 py-1 text-xs rounded-full bg-red-200 hover:bg-red-300 text-red-800">
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
+             {hasPending && (
+  <>
+    <div>
+      {showActions && (
+        <button
+          onClick={() => handleEdit(item)}
+          className="px-3 py-1 text-xs rounded-full bg-yellow-200 hover:bg-yellow-300 text-yellow-800"
+        >
+          Edit
+        </button>
+      )}
+    </div>
+    <div>
+      {showActions && (
+        <button
+          onClick={() => handleDelete(item.id)}
+          className="px-3 py-1 text-xs rounded-full bg-red-200 hover:bg-red-300 text-red-800"
+        >
+          Delete
+        </button>
+      )}
+    </div>
+  </>
+)}
+
             </div>
           );
         })}

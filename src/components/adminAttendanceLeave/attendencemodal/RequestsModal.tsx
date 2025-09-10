@@ -408,12 +408,17 @@ const runDailyWagesJob = async (date: string) => {
           ))}
         </div>
         <div className="bg-[#eeeeee] p-4 rounded-xl max-h-[400px] overflow-y-auto">
-          {loading ? (
-            <p>Loading...</p>
-          ) : (
-            getCurrentData().map((item) => renderRequest(item))
-          )}
-        </div>
+  {loading ? (
+    <p>Loading...</p>
+  ) : getCurrentData().length === 0 ? (
+    <p className="text-center text-gray-500 py-6">
+      No requests for the time being
+    </p>
+  ) : (
+    getCurrentData().map((item) => renderRequest(item))
+  )}
+</div>
+
         <div className="mt-4 flex justify-center gap-4">
           <button
             onClick={() => updateAllStatus("APPROVED")}

@@ -9,7 +9,9 @@ interface Props {
     email: string;
     number: string | null;
     department_name?: string;
+    company_id?: string;
     status?: boolean;
+    avatar?: string;   // ✅ new
   };
   index: number;           // ✅ required, 0-based
   onRefresh: () => void;
@@ -33,11 +35,11 @@ const EmployeeRow: React.FC<Props> = ({ employee, index, onOpenModal }) => {
   <div className="flex items-center">
     {/* Avatar */}
     <div className="relative w-8 h-8 rounded-full  ring-1 ring-black/5">
-      <img
-        src="https://previews.123rf.com/images/archivector/archivector1902/archivector190200317/117964202-abstract-sign-avatar-men-icon-male-profile-white-symbol-on-gray-circle-background-vector.jpg" // Dummy avatar
-        alt="User Avatar"
-        className="w-full h-full object-cover"
-      />
+     <img
+  src={employee.avatar}
+  alt={`${employee.name} Avatar`}
+  className="w-full h-full object-cover rounded-full"
+/>
     </div>
 
     {/* Index Number */}

@@ -12,6 +12,19 @@ interface SubmissionItem {
   status: string;
 }
 
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "APPROVED":
+      return "text-green-600 font-medium";
+    case "PENDING":
+      return "text-yellow-600 font-medium";
+    case "REJECTED":
+      return "text-red-600 font-medium";
+    default:
+      return "text-gray-600";
+  }
+};
+
 const SubmissionTable: React.FC<{ data: SubmissionItem[] }> = ({ data }) => {
   const [selectedProof, setSelectedProof] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -27,7 +40,7 @@ const SubmissionTable: React.FC<{ data: SubmissionItem[] }> = ({ data }) => {
             <th className="py-2 px-4">Description</th>
             <th className="py-2 px-4">Amount</th>
             <th className="py-2 px-4">Proof</th>
-            {/* <th className="py-2 px-4">Action</th> */}
+            <th className="py-2 px-4">Status</th> {/* ✅ Added */}
           </tr>
         </thead>
 
@@ -47,26 +60,25 @@ const SubmissionTable: React.FC<{ data: SubmissionItem[] }> = ({ data }) => {
 
               {/* Proof button */}
               <td className="py-3 px-4">
-                <button
-                  onClick={() => {
-                    setSelectedId(item.id);
-                    setSelectedProof(item.proof || "");
-                  }}
-                  className="flex items-center bg-[#E7EBF6] hover:bg-[#D7DEEE] text-sm px-3 py-1.5 rounded-full"
-                >
-                  View <FaEye className="ml-2 text-gray-700" size={14} />
-                </button>
+                {item.proof ? (
+                  <button
+                    onClick={() => {
+                      setSelectedId(item.id);
+                      setSelectedProof(item.proof || "");
+                    }}
+                    className="flex items-center bg-[#E7EBF6] hover:bg-[#D7DEEE] text-sm px-3 py-1.5 rounded-full"
+                  >
+                    View <FaEye className="ml-2 text-gray-700" size={14} />
+                  </button>
+                ) : (
+                  "-"
+                )}
               </td>
 
-              {/* Approve / Reject buttons */}
-              {/* <td className="py-3 px-4 flex space-x-2 rounded-r-2xl">
-                <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded-full">
-                  Approve
-                </button>
-                <button className="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-full">
-                  Reject
-                </button>
-              </td> */}
+              {/* ✅ Status column */}
+              <td className={`py-3 px-4 rounded-r-2xl ${getStatusColor(item.status)}`}>
+                {item.status}
+              </td>
             </tr>
           ))}
         </tbody>

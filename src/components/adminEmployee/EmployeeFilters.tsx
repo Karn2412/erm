@@ -4,7 +4,6 @@ import { FaMapMarkerAlt, FaUserTie, FaFilter, FaChevronDown } from "react-icons/
 import { supabase } from "../../supabaseClient";
 import { useUser } from "../../context/UserContext";
 
-
 interface Department {
   id: string;
   department_name: string;
@@ -14,23 +13,39 @@ interface Designation {
   id: string;
   designation: string;
 }
+interface WorkLocation {
+  id: string;
+  name: string;
+}
 
 const EmployeeFilters = ({
-  department,
+  
   setDepartment,
-  designation,
+  
   setDesignation,
+ 
+  setWorkLocation,
+  activeEmployees,
+  inactiveEmployees,
+  setSearch,
+
+  
 }: {
   department: string;
   setDepartment: (val: string) => void;
   designation: string;
   setDesignation: (val: string) => void;
+  workLocation: string;
+  setWorkLocation: (val: string) => void;
+  activeEmployees: any[];
+  inactiveEmployees: any[];
+  setSearch: (val: string) => void;
 }) => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [designations, setDesignations] = useState<Designation[]>([]);
   const { userData } = useUser();
+  const [workLocations, setWorkLocations] = useState<WorkLocation[]>([]);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  console.log(department, designation);
 
   // Fetch departments
   useEffect(() => {
@@ -47,6 +62,21 @@ const EmployeeFilters = ({
     fetchDepartments();
   }, [userData]);
 
+  // Fetch work locations
+  useEffect(() => {
+    const fetchWorkLocations = async () => {
+      if (!userData?.company_id) return;
+
+      const { data, error } = await supabase
+        .from("work_locations")
+        .select("id, name")
+        .eq("company_id", userData.company_id);
+
+      if (!error && data) setWorkLocations(data);
+    };
+    fetchWorkLocations();
+  }, [userData]);
+
   // Fetch designations
   useEffect(() => {
     const fetchDesignations = async () => {
@@ -61,6 +91,13 @@ const EmployeeFilters = ({
 
   const toggleDropdown = (name: string) => {
     setOpenDropdown(openDropdown === name ? null : name);
+  };
+
+  // helper when clicking a person in More Filters
+  const handleClickPerson = (name: string | undefined) => {
+    if (!name) return;
+    setSearch(name);
+    setOpenDropdown(null);
   };
 
   return (
@@ -85,7 +122,21 @@ const EmployeeFilters = ({
         </button>
         {openDropdown === "work" && (
           <div className="absolute top-full left-0 mt-2 w-full bg-white shadow rounded-xl z-10">
-            <div className="px-4 py-2 hover:bg-violet-50 cursor-pointer">under development</div>
+            <div
+              className="px-4 py-2 hover:bg-violet-50 cursor-pointer"
+              onClick={() => setWorkLocation("")}
+            >
+              All
+            </div>
+            {workLocations.map((loc) => (
+              <div
+                key={loc.id}
+                className="px-4 py-2 hover:bg-violet-50 cursor-pointer"
+                onClick={() => setWorkLocation(loc.id)}
+              >
+                {loc.name}
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -120,7 +171,7 @@ const EmployeeFilters = ({
               <div
                 key={dep.id}
                 className="px-4 py-2 hover:bg-blue-50 cursor-pointer"
-                onClick={() => setDepartment(dep.id)} // 🔑 use id, not name
+                onClick={() => setDepartment(dep.id)}
               >
                 {dep.department_name}
               </div>
@@ -159,7 +210,7 @@ const EmployeeFilters = ({
               <div
                 key={des.id}
                 className="px-4 py-2 hover:bg-red-50 cursor-pointer"
-                onClick={() => setDesignation(des.id)} // 🔑 use id
+                onClick={() => setDesignation(des.id)}
               >
                 {des.designation}
               </div>
@@ -186,11 +237,52 @@ const EmployeeFilters = ({
             }`}
           />
         </button>
+
         {openDropdown === "more" && (
           <div className="absolute top-full left-0 mt-2 w-full bg-white shadow rounded-xl z-10">
-            <div className="px-4 py-2 hover:bg-pink-50 cursor-pointer">
-              under development
-            </div>
+            {/* Active Members */}
+            {activeEmployees && activeEmployees.length > 0 && (
+              <div className="border-b border-gray-200">
+                <div className="px-4 py-2 font-semibold text-gray-700 bg-green-50">
+                  Active Members
+                </div>
+                {activeEmployees.map(emp => (
+                  <div
+                    key={emp.id}
+                    className="px-4 py-2 hover:bg-green-100 cursor-pointer text-sm"
+                    onClick={() => handleClickPerson(emp.name)}
+                  >
+                    {emp.name}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Inactive Members */}
+            {inactiveEmployees && inactiveEmployees.length > 0 && (
+              <div>
+                <div className="px-4 py-2 font-semibold text-gray-700 bg-gray-50">
+                  Inactive Members
+                </div>
+                {inactiveEmployees.map(emp => (
+                  <div
+                    key={emp.id}
+                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-500"
+                    onClick={() => handleClickPerson(emp.name)}
+                  >
+                    {emp.name}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* If no data */}
+            {(!activeEmployees || activeEmployees.length === 0) &&
+              (!inactiveEmployees || inactiveEmployees.length === 0) && (
+                <div className="px-4 py-3 text-sm text-gray-500">
+                  No members to show
+                </div>
+              )}
           </div>
         )}
       </div>
@@ -199,4 +291,3 @@ const EmployeeFilters = ({
 };
 
 export default EmployeeFilters;
-
