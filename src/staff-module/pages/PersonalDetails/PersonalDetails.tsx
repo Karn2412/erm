@@ -20,6 +20,35 @@ const PersonalDetailsPage: React.FC = () => {
 });
 
 
+// ✅ Validation helpers
+const validateBasicDetails = () => {
+  return (
+    basicDetails.date_of_birth &&
+    basicDetails.age &&
+    basicDetails.pan_no &&
+    basicDetails.fathers_name &&
+    basicDetails.personal_email
+  );
+};
+
+const validateBankingDetails = () => {
+  return (
+    bankingDetails.name &&
+    bankingDetails.accountNumber &&
+    bankingDetails.reEnterAccountNumber === bankingDetails.accountNumber &&
+    bankingDetails.ifscCode &&
+    bankingDetails.bankName &&
+    bankingDetails.branchName
+  );
+};
+
+const validateDocuments = () => {
+  // check that all required docs are uploaded
+  return usersdocuments.documents.length >= 4;
+};
+
+
+
 const handleSubmit = async () => {
   try {
     const { data: authUser } = await supabase.auth.getUser();
@@ -63,6 +92,8 @@ const handleSubmit = async () => {
 
   return publicUrlData.publicUrl;
 };
+
+
 
 
     // Upload all files in documents[]
@@ -204,33 +235,51 @@ const handleSubmit = async () => {
           )}
         </div>
 
-        {/* 🔹 Navigation Buttons */}
-        <div className="mt-6 flex justify-center gap-4">
-          {currentSection > 1 && (
-            <button
-              onClick={() => setCurrentSection((prev) => prev - 1)}
-              className="bg-gray-300 text-gray-700 px-6 py-2 rounded-full hover:bg-gray-400"
-            >
-              Back
-            </button>
-          )}
-          {currentSection < 3 && (
-            <button
-              onClick={() => setCurrentSection((prev) => prev + 1)}
-              className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700"
-            >
-              Next
-            </button>
-          )}
-          {currentSection === 3 && (
-            <button
-              onClick={handleSubmit}
-              className="bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700"
-            >
-              Submit Details
-            </button>
-          )}
-        </div>
+       {/* 🔹 Navigation Buttons */}
+<div className="mt-6 flex justify-center gap-4">
+  {currentSection > 1 && (
+    <button
+      onClick={() => setCurrentSection((prev) => prev - 1)}
+      className="bg-gray-300 text-gray-700 px-6 py-2 rounded-full hover:bg-gray-400"
+    >
+      Back
+    </button>
+  )}
+
+  {currentSection < 3 && (
+    <button
+      onClick={() => {
+        if (
+          (currentSection === 1 && !validateBasicDetails()) ||
+          (currentSection === 2 && !validateBankingDetails())
+        ) {
+          alert("⚠️ Please fill all mandatory fields before continuing.");
+          return;
+        }
+        setCurrentSection((prev) => prev + 1);
+      }}
+      className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700"
+    >
+      Next
+    </button>
+  )}
+
+  {currentSection === 3 && (
+    <button
+      onClick={() => {
+        if (!validateDocuments()) {
+          alert("⚠️ Please upload all required documents before submitting.");
+          return;
+        }
+        handleSubmit();
+      }}
+      className="bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700"
+    >
+      Submit Details
+    </button>
+  )}
+</div>
+
       </div>
     </main>
   </div>

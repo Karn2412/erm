@@ -9,25 +9,9 @@ import { supabase } from '../../../supabaseClient'
 import { useUser } from '../../../context/UserContext'
 import { format, endOfMonth, addDays, isAfter } from 'date-fns'
 import { FaMapMarkerAlt } from 'react-icons/fa'
+import type { AttendanceRecord } from '../../../types/attendance'
 
-interface AttendanceRecord {
-  day: string;
-  date: string;
-  hoursWorked: string;
-  expectedHours: string;
-  status: string;
-  checkInLocation: { lat: number; long: number; time?: string } | null;
-  checkOutLocation: { lat: number; long: number; time?: string } | null;
-  requestType?: string;
-  requestStatus?: string;
-  isFuture?: boolean;
-  first_check_in_time?: string | null;
-  last_check_out_time?: string | null;
-  check_in_latitudes?: number[] | null;
-  check_in_longitudes?: number[] | null;
-  check_out_latitudes?: number[] | null;
-  check_out_longitudes?: number[] | null;
-}
+
 
 
 interface AttendanceRequest {
@@ -140,31 +124,56 @@ const EmployeeAttendancePage = () => {
 
         const dbEntry = summary?.find((entry) => entry.attendance_date === formattedDate);
 
-        if (leaveDates.has(formattedDate)) {
-          transformed.push({
-            day: weekday,
-            date: formattedDate,
-            hoursWorked: dbEntry?.total_worked_hours?.toFixed(2) ?? '0.00',
-            expectedHours: dbEntry?.expected_hours?.toFixed(2) ?? '0.00',
-            status: 'Leave',
-            checkInLocation: null,
-            checkOutLocation: null,
-            
-          });
-          continue;
-        }
-        if (wfhDates.has(formattedDate)) {
-          transformed.push({
-            day: weekday,
-            date: formattedDate,
-            hoursWorked: dbEntry?.total_worked_hours?.toFixed(2) ?? '0.00',
-            expectedHours: dbEntry?.expected_hours?.toFixed(2) ?? '0.00',
-            status: 'WFH',
-            checkInLocation: null,
-            checkOutLocation: null,
-          });
-          continue;
-        }
+       if (leaveDates.has(formattedDate)) {
+  transformed.push({
+    day: weekday,
+    date: formattedDate,
+    hoursWorked: dbEntry?.total_worked_hours?.toFixed(2) ?? '0.00',
+    expectedHours: dbEntry?.expected_hours?.toFixed(2) ?? '0.00',
+    status: 'Leave',
+
+    // raw fields (required by type) — set null when absent
+    first_check_in_time: dbEntry?.first_check_in_time ?? null,
+    last_check_out_time: dbEntry?.last_check_out_time ?? null,
+    check_in_latitudes: dbEntry?.check_in_latitudes ?? null,
+    check_in_longitudes: dbEntry?.check_in_longitudes ?? null,
+    check_out_latitudes: dbEntry?.check_out_latitudes ?? null,
+    check_out_longitudes: dbEntry?.check_out_longitudes ?? null,
+    attendance_statuses: dbEntry?.attendance_statuses ?? null,
+    request_type: dbEntry?.request_type ?? null,
+    request_status: dbEntry?.request_status ?? null,
+
+    // friendly objects you also use elsewhere
+    checkInLocation: null,
+    checkOutLocation: null,
+  } as AttendanceRecord);
+  continue;
+}
+
+if (wfhDates.has(formattedDate)) {
+  transformed.push({
+    day: weekday,
+    date: formattedDate,
+    hoursWorked: dbEntry?.total_worked_hours?.toFixed(2) ?? '0.00',
+    expectedHours: dbEntry?.expected_hours?.toFixed(2) ?? '0.00',
+    status: 'WFH',
+
+    first_check_in_time: dbEntry?.first_check_in_time ?? null,
+    last_check_out_time: dbEntry?.last_check_out_time ?? null,
+    check_in_latitudes: dbEntry?.check_in_latitudes ?? null,
+    check_in_longitudes: dbEntry?.check_in_longitudes ?? null,
+    check_out_latitudes: dbEntry?.check_out_latitudes ?? null,
+    check_out_longitudes: dbEntry?.check_out_longitudes ?? null,
+    attendance_statuses: dbEntry?.attendance_statuses ?? null,
+    request_type: dbEntry?.request_type ?? null,
+    request_status: dbEntry?.request_status ?? null,
+
+    checkInLocation: null,
+    checkOutLocation: null,
+  } as AttendanceRecord);
+  continue;
+}
+
 
 if (dbEntry) {
   const worked = Number(dbEntry.total_worked_hours ?? 0);
@@ -173,25 +182,24 @@ if (dbEntry) {
   const underHours = !isWeekend && !isFuture && expected > 0 && worked + 0.01 < expected;
   if (underHours) status = 'Regularize';
 
-  // raw fields from the view (pass them as-is)
   const rawFirst = dbEntry.first_check_in_time ?? null;
   const rawLast = dbEntry.last_check_out_time ?? null;
 
-  // safe pick for first/last lat/long for friendly object
   const firstInLat = dbEntry.check_in_latitudes?.[0] ?? null;
   const firstInLong = dbEntry.check_in_longitudes?.[0] ?? null;
   const lastOutIndex = (dbEntry.check_out_latitudes?.length ?? 0) - 1;
   const lastOutLat = lastOutIndex >= 0 ? dbEntry.check_out_latitudes?.[lastOutIndex] ?? null : null;
   const lastOutLong = lastOutIndex >= 0 ? dbEntry.check_out_longitudes?.[lastOutIndex] ?? null : null;
 
-  transformed.push({
+  const record: AttendanceRecord = {
+    // core
     day: weekday,
     date: dbEntry.attendance_date,
+    attendance_date: dbEntry.attendance_date,
     hoursWorked: worked.toFixed(2),
     expectedHours: expected.toFixed(2),
-    status,
 
-    // <-- raw snake_case fields required by AttendanceWeeklyTable (unmodified) -->
+    // raw arrays and times (always present in the type; set null if no data)
     first_check_in_time: rawFirst,
     last_check_out_time: rawLast,
     check_in_latitudes: dbEntry.check_in_latitudes ?? null,
@@ -199,26 +207,42 @@ if (dbEntry) {
     check_out_latitudes: dbEntry.check_out_latitudes ?? null,
     check_out_longitudes: dbEntry.check_out_longitudes ?? null,
 
-    // <-- friendly shaped objects you already used elsewhere -->
-    checkInLocation: rawFirst
-      ? { lat: firstInLat, long: firstInLong, time: new Date(rawFirst).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
-      : null,
-    checkOutLocation: rawLast
-      ? { lat: lastOutLat, long: lastOutLong, time: new Date(rawLast).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
-      : null,
-  } as any);
+    // extra metadata
+    attendance_statuses: dbEntry.attendance_statuses ?? null,
+    request_type: dbEntry.request_type ?? null,
+    request_status: dbEntry.request_status ?? null,
+
+    // computed friendly objects
+    checkInLocation: rawFirst ? { lat: firstInLat, long: firstInLong, time: new Date(rawFirst).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) } : null,
+    checkOutLocation: rawLast ? { lat: lastOutLat, long: lastOutLong, time: new Date(rawLast).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) } : null,
+
+    // status
+    status,
+  };
+
+  transformed.push(record);
 } else {
           const status = isWeekend ? (isFuture ? 'Incomplete' : 'Approved Off') : (isFuture ? 'Incomplete' : 'Absent');
-          transformed.push({
-            day: weekday,
-            date: formattedDate,
-            hoursWorked: '0.00',
-            expectedHours: '0.00',
-            status,
-            
-            checkInLocation: null,
-            checkOutLocation: null,
-          });
+// fallback when no dbEntry
+transformed.push({
+  day: weekday,
+  date: formattedDate,
+  hoursWorked: '0.00',
+  expectedHours: '0.00',
+  status,
+  first_check_in_time: null,
+  last_check_out_time: null,
+  check_in_latitudes: null,
+  check_in_longitudes: null,
+  check_out_latitudes: null,
+  check_out_longitudes: null,
+  attendance_statuses: null,
+  request_type: null,
+  request_status: null,
+  checkInLocation: null,
+  checkOutLocation: null,
+} as AttendanceRecord);
+
         }
       }
 
@@ -353,7 +377,7 @@ if (dbEntry) {
       if (found) {
         if (isWeekend) status = "Approved Off";
         else if (isFuture) status = "Incomplete";
-        else status = found.status;
+        else status = found.status ?? 'Absent';
       } else {
         status = isWeekend ? "Approved Off" : isFuture ? "Incomplete" : "Absent";
       }

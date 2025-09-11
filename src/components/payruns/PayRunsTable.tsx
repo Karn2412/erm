@@ -10,7 +10,7 @@ interface PayRun {
   employee_name: string;
   salary: number;
   deductions: number;
-  incentives: number;
+  incentives: number; // ⚡ keep it in state, default = 0
   reimbursements: number;
   total_pay: number;
   source: "Live" | "History";
@@ -44,7 +44,6 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
             monthly_ctc,
             base_pay,
             deductions,
-            incentives,
             reimbursements,
             total_pay,
             month
@@ -61,7 +60,7 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
           employee_name: item.employee_name,
           salary: item.monthly_ctc,
           deductions: item.deductions || 0,
-          incentives: item.incentives || 0,
+          incentives: 0, // ⚡ not in view → default to 0
           reimbursements: item.reimbursements || 0,
           total_pay: item.total_pay,
           source: "Live" as const,
@@ -77,11 +76,10 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
             monthly_ctc,
             base_pay,
             deductions,
-            incentives,
             reimbursements,
             total_pay
           `)
-          .eq("month", `${selectedMonth}-01`);
+          .eq("month", selectedMonth); // ⚡ match YYYY-MM
 
         if (histErr) {
           console.error("❌ History payroll error:", histErr);
@@ -94,7 +92,7 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
           employee_name: item.employee_name,
           salary: item.monthly_ctc,
           deductions: item.deductions || 0,
-          incentives: item.incentives || 0,
+          incentives: 0, // ⚡ default
           reimbursements: item.reimbursements || 0,
           total_pay: item.total_pay,
           source: "History" as const,
@@ -125,8 +123,8 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
     const checkApproval = async () => {
       const { data } = await supabase
         .from("payroll_history_view")
-        .select("id")
-        .eq("month", `${selectedMonth}-01`)
+        .select("user_id")
+        .eq("month", selectedMonth) // ⚡ match YYYY-MM
         .limit(1);
 
       setAlreadyApproved((data?.length ?? 0) > 0);
@@ -144,7 +142,7 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
   const handleApprovePayroll = async () => {
     try {
       const { error } = await supabase.rpc("close_month_payroll", {
-        p_month: `${selectedMonth}-01`,
+        p_month: selectedMonth, // ⚡ YYYY-MM
       });
 
       if (error) {
@@ -223,9 +221,9 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
                   {item.employee_name}
                 </td>
                 <td className="py-3 px-4">{item.salary}</td>
-                <td className="py-3 px-4 ">{item.deductions}</td>
-                <td className="py-3 px-4 ">{item.incentives}</td>
-                <td className="py-3 px-4 ">{item.reimbursements}</td>
+                <td className="py-3 px-4">{item.deductions}</td>
+                <td className="py-3 px-4">{item.incentives}</td>
+                <td className="py-3 px-4">{item.reimbursements}</td>
                 <td className="py-3 px-4 font-semibold">{item.total_pay}</td>
                 <td className="py-3 px-4 rounded-r-lg">
                   <button

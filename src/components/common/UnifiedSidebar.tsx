@@ -3,7 +3,6 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   FaUsers,
   FaCalendarAlt,
-  
   FaRegFileAlt,
   FaCog,
   FaUserCircle,
@@ -13,7 +12,6 @@ import {
 import { MdDashboard } from "react-icons/md";
 import { useUser } from "../../context/UserContext";
 import { supabase } from "../../supabaseClient";
-// 👈 make sure you have supabase client
 
 interface Props {
   isOpen: boolean;
@@ -44,27 +42,81 @@ const UnifiedSidebar: React.FC<Props> = ({ isOpen, onClose, role }) => {
   const { userData } = useUser();
   const menuItems = role === "admin" ? adminMenuItems : staffMenuItems;
 
-  // 👇 state for company details
+  // 👇 company info
   const [company, setCompany] = useState<{ name: string; logo_url?: string } | null>(null);
 
-  // 👇 fetch company whenever userData changes
+  // 👇 counts
+  const [attendanceCount, setAttendanceCount] = useState(0);
+  const [reimbursementCount, setReimbursementCount] = useState(0);
+
+  // Fetch company
   useEffect(() => {
     const fetchCompany = async () => {
       if (!userData?.company_id) return;
-
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("companies")
         .select("name, logo_url")
         .eq("id", userData.company_id)
         .single();
-
-      if (!error && data) {
-        setCompany(data);
-      }
+      if (data) setCompany(data);
     };
-
     fetchCompany();
   }, [userData?.company_id]);
+
+  // Fetch request counts
+// Fetch request counts initially + subscribe for realtime updates
+useEffect(() => {
+  if (!userData?.company_id) return;
+
+  const fetchRequests = async () => {
+    try {
+      if (userData?.role?.toLowerCase() === "admin") {
+        const { count: attCount } = await supabase
+          .from("attendance_requests")
+          .select("*", { count: "exact", head: true })
+          .eq("company_id", userData.company_id)
+          .eq("status", "PENDING");
+
+        const { count: reimbCount } = await supabase
+          .from("reimbursements")
+          .select("*", { count: "exact", head: true })
+          .eq("company_id", userData.company_id)
+          .eq("status", "PENDING");
+
+        setAttendanceCount(attCount || 0);
+        setReimbursementCount(reimbCount || 0);
+      }
+    } catch (err) {
+      console.error("Error fetching requests count:", err);
+    }
+  };
+
+  fetchRequests();
+
+  // --- ✅ Listen for real-time changes ---
+  const channel = supabase
+    .channel("sidebar-updates")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "attendance_requests" },
+      () => {
+        fetchRequests(); // refresh counts on any change
+      }
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "reimbursements" },
+      () => {
+        fetchRequests(); // refresh counts on any change
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [userData?.company_id, userData?.role]);
+
 
   return (
     <>
@@ -79,7 +131,7 @@ const UnifiedSidebar: React.FC<Props> = ({ isOpen, onClose, role }) => {
         className={`fixed z-40 top-0 left-0 h-full w-72 bg-white p-4 border-r-gray-200 transform transition-transform duration-300 ease-in-out
           ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:static md:block`}
       >
-        {/* 👇 Dynamic company info */}
+        {/* Company */}
         <div className="flex items-center space-x-3 mb-6">
           {company?.logo_url && (
             <img
@@ -93,24 +145,41 @@ const UnifiedSidebar: React.FC<Props> = ({ isOpen, onClose, role }) => {
           </h1>
         </div>
 
+        {/* Menu */}
         <ul className="space-y-4">
           {menuItems.map((item) => {
             const isActive =
               location.pathname === item.path ||
               location.pathname.startsWith(item.path);
 
+            // attach badge counts for specific items
+            const badgeCount =
+              item.name === "Attendance and Leave"
+                ? attendanceCount
+                : item.name === "Reimbursements"
+                ? reimbursementCount
+                : 0;
+
             return (
-              <li key={item.name}>
+              <li key={item.name} className="relative">
                 <NavLink
                   to={item.path}
-                  className={`flex items-center space-x-3 px-4 py-2 rounded-xl font-medium ${
+                  className={`flex items-center justify-between px-4 py-2 rounded-xl font-medium ${
                     isActive
                       ? "text-white bg-gradient-to-r from-cyan-500 to-blue-400 shadow-md"
                       : "text-gray-700 hover:bg-gray-100"
                   }`}
                 >
-                  {item.icon}
-                  <span>{item.name}</span>
+                  <div className="flex items-center space-x-3">
+                    {item.icon}
+                    <span>{item.name}</span>
+                  </div>
+
+                  {badgeCount > 0 && (
+                    <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                      {badgeCount}
+                    </span>
+                  )}
                 </NavLink>
               </li>
             );

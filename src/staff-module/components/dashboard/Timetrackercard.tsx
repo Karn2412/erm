@@ -137,49 +137,53 @@ const companyId = workingData[0].company_id;
     }
   };
 
-  const handleCheckOut = async () => {
-    setCheckOutLoading(true);
-    try {
-      const { latitude, longitude } = await getLocation();
-      const userId = userData.id;
+ const handleCheckOut = async () => {
+  setCheckOutLoading(true);
+  try {
+    const { latitude, longitude } = await getLocation();
+    const userId = userData.id;
 
-      const { data: openRecords, error: fetchError } = await supabase
-        .from("attendance")
-        .select("*")
-        .eq("user_id", userId)
-        .is("check_out_time", null)
-        .order("check_in_time", { ascending: false })
-        .limit(1);
+    // 1️⃣ Find the latest open record (no checkout yet)
+    const { data: openRecords, error: fetchError } = await supabase
+      .from("attendance")
+      .select("*")
+      .eq("user_id", userId)
+      .is("check_out_time", null)
+      .order("check_in_time", { ascending: false });
 
-      if (fetchError || !openRecords || openRecords.length === 0) {
-        throw new Error("No open attendance record found.");
-      }
-
-      const latestOpen = openRecords[0];
-
-      const { data, error } = await supabase
-        .from("attendance")
-        .update({
-          check_out_time: new Date().toISOString(),
-          check_out_latitude: latitude,
-          check_out_longitude: longitude,
-          updated_by: userId,
-        })
-        .eq("id", latestOpen.id)
-        .select("*")
-        .single();
-
-      if (error) throw error;
-
-      toast.success("Checked out successfully!");
-      setTodayRecord(data);
-    } catch (err: any) {
-      console.error("Check-out error:", err.message);
-      toast.error("Check-out failed!");
-    } finally {
-      setCheckOutLoading(false);
+    if (fetchError) throw fetchError;
+    if (!openRecords || openRecords.length === 0) {
+      throw new Error("No open attendance record found.");
     }
-  };
+
+    const latestOpen = openRecords[0];
+
+    // 2️⃣ Update only that row
+    const { data, error } = await supabase
+      .from("attendance")
+      .update({
+        check_out_time: new Date().toISOString(),
+        check_out_latitude: latitude,
+        check_out_longitude: longitude,
+        updated_by: userId,
+      })
+      .eq("id", latestOpen.id) // ✅ ensures only 1 row
+      .select("*")             // returns updated row(s)
+      .maybeSingle();          // ✅ safer than .single()
+
+    if (error) throw error;
+    if (!data) throw new Error("No row was updated.");
+
+    toast.success("Checked out successfully!");
+    setTodayRecord(data);
+  } catch (err: any) {
+    console.error("Check-out error:", err.message);
+    toast.error("Check-out failed!");
+  } finally {
+    setCheckOutLoading(false);
+  }
+};
+
 
   const isCheckedIn =
     todayRecord?.check_in_time && !todayRecord?.check_out_time;

@@ -16,6 +16,7 @@ interface Employee {
   designation_id?: string | null;
   location_id?: string | null;
   work_location?: string | null;
+  profile_status?: string;
 }
 
 const EmployeeTable: React.FC<{
@@ -44,7 +45,7 @@ const EmployeeTable: React.FC<{
 
     let query: any = supabase
       .from("user_with_email")
-      .select("auth_id, email, name, number, is_active, department_id, department_name, designation_id, company_id, gender, gender_avatar, location_id, work_location")
+      .select("auth_id, email, name, number, is_active, department_id, department_name, designation_id, company_id, gender, gender_avatar, location_id, work_location, profile_status")
       .eq("company_id", userData.company_id)
       .neq("auth_id", userData.id);
 
@@ -90,6 +91,7 @@ const EmployeeTable: React.FC<{
       designation_id: emp.designation_id,
       location_id: emp.location_id,
       work_location: emp.work_location,
+      profile_status: emp.profile_status, 
     }));
 
     // produce active/inactive lists for More Filters

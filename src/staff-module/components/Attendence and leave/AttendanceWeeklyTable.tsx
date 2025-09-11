@@ -2,22 +2,8 @@
 import React from "react";
 import {  FaMapMarkerAlt } from "react-icons/fa";
 import { isAfter, startOfWeek, addDays, format } from "date-fns";
+import type { AttendanceRecord } from "../../../types/attendance";
 
-interface AttendanceRecord {
-  date: string;
-  attendance_date?: string; // for upstream compatibility
-  hoursWorked: string;
-  expectedHours: string;
-  check_in_latitudes: number[] | null;
-  check_in_longitudes: number[] | null;
-  check_out_latitudes: number[] | null;
-  check_out_longitudes: number[] | null;
-  first_check_in_time?: string | null;
-  last_check_out_time?: string | null;
-  request_type?: string | null;
-  request_status?: string | null;
-  attendance_statuses?: string[] | null;
-}
 
 interface TableRow extends AttendanceRecord {
   day: string;
