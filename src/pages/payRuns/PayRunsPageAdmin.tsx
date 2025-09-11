@@ -13,7 +13,7 @@ const PayRunsPageAdmin: React.FC = () => {
     <div className="flex">
       <div className="flex-1">
         <div className="p-9 bg-indigo-50 ">
-          <div className="bg-white p-5">
+          <div className="bg-white p-5 rounded-2xl" >
             <h2 className="text-lg font-semibold mb-4">Upcoming Pay Runs</h2>
 
             {/* pass props */}

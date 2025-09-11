@@ -1,6 +1,7 @@
 // utils/createPayslipPdf.ts
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+
+import autoTable from "jspdf-autotable"; 
 import { useUser } from "../context/UserContext"; // adjust path if needed
 
 type PayrollRow = {
@@ -71,7 +72,7 @@ export function usePayslipPdf() {
     doc.text(`Month: ${monthLabel}`, 40, 142);
 
     // ---- Earnings / Deductions table ----
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: 170,
       head: [["Component", "Amount"]],
       body: [

@@ -3,6 +3,7 @@ import PaySlipCard from "../../components/payslip/PaySlipCard";
 import { supabase } from "../../../supabaseClient";
 import { useUser } from "../../../context/UserContext";
 import { FaDownload, FaCalendarAlt } from "react-icons/fa";
+import { usePayslipPdf } from "../../../utils/createPayslipPdf";
 
 interface PayrollHistory {
   id: string;
@@ -31,6 +32,7 @@ const PayRunsPage = () => {
   const [selectedQuarter, setSelectedQuarter] = useState(quarterOptions[0]);
   const [showAll, setShowAll] = useState(false);
   const { userData } = useUser();
+  const { createPayslipPdf } = usePayslipPdf();
 
   useEffect(() => {
     const fetchPayrolls = async () => {
@@ -59,6 +61,18 @@ const PayRunsPage = () => {
         const m = new Date(p.month).getMonth();
         return selectedQuarter.months.includes(m);
       });
+
+  const handleDownloadAll = () => {
+    filteredPayrolls.forEach((pay) => {
+      const doc = createPayslipPdf(pay);
+      const fileName = `Payslip_${new Date(pay.month).toLocaleDateString(
+        "en-IN",
+        { month: "short", year: "numeric" }
+      )}.pdf`;
+      doc.save(fileName);
+    });
+  };
+    
 
   return (
     <div className="flex flex-col w-full">
@@ -97,7 +111,7 @@ const PayRunsPage = () => {
             {/* Buttons */}
             <div className="flex items-center gap-3">
               <button
-                onClick={() => console.log("⬇ Download all", filteredPayrolls)}
+                onClick={() => handleDownloadAll()}
                 className="bg-green-500 text-white px-4 py-2 rounded flex items-center gap-2 text-sm"
               >
                 <FaDownload /> Download All

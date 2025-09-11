@@ -3,6 +3,7 @@ import { FaDownload } from "react-icons/fa";
 import PayslipPreviewModal from "../Staffpayslip/PaySlipPreview";
 import { supabase } from "../../../supabaseClient";
 import { fillTemplate } from "../../../utils/filledtemplate";
+import { usePayslipPdf } from "../../../utils/createPayslipPdf";
 
 interface PayrollHistory {
   id: string;
@@ -28,6 +29,7 @@ const PaySlipCard: React.FC<PaySlipCardProps> = ({ payroll }) => {
   const [showActions, setShowActions] = useState(false);
   const [templateHtml, setTemplateHtml] = useState<string>("");
   const [filledTemplate, setFilledTemplate] = useState<string>("");
+  const { createPayslipPdf } = usePayslipPdf();
 
   useEffect(() => {
     async function loadTemplate() {
@@ -41,8 +43,12 @@ const PaySlipCard: React.FC<PaySlipCardProps> = ({ payroll }) => {
       }
     }
     loadTemplate();
-  }, []);
 
+  }, []);
+const handleDownload = () => {
+    const doc = createPayslipPdf(payroll);
+    doc.save(`Payslip_${new Date(payroll.month).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}.pdf`);
+  };
   useEffect(() => {
     if (!templateHtml) return;
     const templateData = {
@@ -81,6 +87,7 @@ const PaySlipCard: React.FC<PaySlipCardProps> = ({ payroll }) => {
       </div>
 
       {/* Actions only visible when clicked */}
+      {/* Actions */}
       {showActions && (
         <div className="flex flex-col gap-2 items-center">
           <button
@@ -90,13 +97,14 @@ const PaySlipCard: React.FC<PaySlipCardProps> = ({ payroll }) => {
             Preview
           </button>
           <button
-            onClick={() => console.log("⬇ Download payslip", payroll.id)}
+            onClick={handleDownload}
             className="bg-green-500 text-white px-4 py-1 rounded-full text-sm flex items-center gap-2"
           >
             <FaDownload /> Download
           </button>
         </div>
       )}
+
 
       {showModal && (
         <PayslipPreviewModal
