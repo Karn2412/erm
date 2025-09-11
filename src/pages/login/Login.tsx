@@ -89,75 +89,82 @@ const LoginPage: React.FC = () => {
 
       {/* Login Card */}
       <div className="bg-white rounded-3xl shadow-xl px-10 py-10 z-10 w-full max-w-md text-center">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-2">Sign In</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Enter your credentials to access your account
-        </p>
+  <h2 className="text-2xl font-semibold text-gray-900 mb-2">Sign In</h2>
+  <p className="text-sm text-gray-600 mb-4">
+    Enter your credentials to access your account
+  </p>
 
+  {/* Wrap inputs and button in a form */}
+  <form
+    onSubmit={(e) => {
+      e.preventDefault(); // prevent default form submit reload
+      handleLogin();
+    }}
+  >
+    {/* Email Input */}
+    <div className="mb-4 text-left">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Email
+      </label>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Enter your Email"
+        className="w-full px-4 py-2 rounded-lg bg-gray-100 text-sm outline-none"
+      />
+    </div>
 
+    {/* Password Input */}
+    <div className="mb-4 text-left">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Password
+      </label>
+      <input
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Enter your Password"
+        className="w-full px-4 py-2 rounded-lg bg-gray-100 text-sm outline-none"
+      />
+    </div>
 
-
-        {/* Email Input */}
-        <div className="mb-4 text-left">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your Email"
-            className="w-full px-4 py-2 rounded-lg bg-gray-100 text-sm outline-none"
-          />
-        </div>
-
-        {/* Password Input */}
-        <div className="mb-4 text-left">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Password
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your Password"
-            className="w-full px-4 py-2 rounded-lg bg-gray-100 text-sm outline-none"
-          />
-        </div>
-
-        {/* Role Selection */}
-
-        <div className="flex justify-center gap-4 mb-6">
-          {["admin", "staff"].map((r) => (
-            <button
-              key={r}
-              onClick={() => setRoleType(r as "admin" | "staff")}
-              className={`px-6 py-2 rounded-lg text-sm font-medium border transition-all duration-200 ${roleType === r
-                  ? "bg-[#002B5B] text-white border-[#002B5B]"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-            >
-              {r === "admin" ? "Admin Login" : "Staff Login"}
-            </button>
-          ))}
-        </div>
-
-        {/* Login Button */}
+    {/* Role Selection */}
+    <div className="flex justify-center gap-4 mb-6">
+      {["admin", "staff"].map((r) => (
         <button
-          onClick={handleLogin}
-          className="w-full bg-[#002B5B] text-white py-2 rounded-lg text-sm font-semibold hover:bg-blue-900 transition"
+          key={r}
+          type="button"
+          onClick={() => setRoleType(r as "admin" | "staff")}
+          className={`px-6 py-2 rounded-lg text-sm font-medium border transition-all duration-200 ${
+            roleType === r
+              ? "bg-[#002B5B] text-white border-[#002B5B]"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
         >
-          Login
+          {r === "admin" ? "Admin Login" : "Staff Login"}
         </button>
+      ))}
+    </div>
 
-        {error && (
-          <p className="text-red-500 text-sm mt-3 text-center">{error}</p>
-        )}
+    {/* Login Button */}
+    <button
+      type="submit" // ✅ Important: triggers form submit on Enter
+      className="w-full bg-[#002B5B] text-white py-2 rounded-lg text-sm font-semibold hover:bg-blue-900 transition"
+    >
+      Login
+    </button>
 
-        <p className="text-xs text-gray-600 mt-4">
-          Don’t have an account? Contact your administrator
-        </p>
-      </div>
+    {error && (
+      <p className="text-red-500 text-sm mt-3 text-center">{error}</p>
+    )}
+  </form>
+
+  <p className="text-xs text-gray-600 mt-4">
+    Don’t have an account? Contact your administrator
+  </p>
+</div>
+
     </div>
   );
 };
