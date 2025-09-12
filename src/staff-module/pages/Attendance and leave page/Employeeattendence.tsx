@@ -66,7 +66,7 @@ const EmployeeAttendancePage = () => {
       case 'Approved Off': return 'bg-blue-500';
       case 'Leave': return 'bg-indigo-500';
       case 'WFH': return 'bg-purple-500';
-      case 'Incomplete': return 'bg-gray-500';
+      case 'Incomplete': return 'bg-gray-400';
       default: return 'bg-gray-300';
     }
   };
@@ -178,72 +178,97 @@ if (wfhDates.has(formattedDate)) {
 if (dbEntry) {
   const worked = Number(dbEntry.total_worked_hours ?? 0);
   const expected = Number(dbEntry.expected_hours ?? 0);
-  let status: string = dbEntry.attendance_statuses?.[0] || 'Absent';
+
+  // ✅ Trust backend first
+  let status: string = dbEntry.attendance_statuses?.[0] || "Absent";
+
+  // ---- Staff-specific override ----
   const underHours = !isWeekend && !isFuture && expected > 0 && worked + 0.01 < expected;
-  if (underHours) status = 'Regularize';
 
-  const rawFirst = dbEntry.first_check_in_time ?? null;
-  const rawLast = dbEntry.last_check_out_time ?? null;
+  if (underHours) {
+    if (dbEntry.first_check_in_time) {
+      // staff showed up but did not complete hours
+      status = "Regularize";
+    } else {
+      // no check-in at all
+      status = "Absent";
+    }
+  }
 
-  const firstInLat = dbEntry.check_in_latitudes?.[0] ?? null;
-  const firstInLong = dbEntry.check_in_longitudes?.[0] ?? null;
-  const lastOutIndex = (dbEntry.check_out_latitudes?.length ?? 0) - 1;
-  const lastOutLat = lastOutIndex >= 0 ? dbEntry.check_out_latitudes?.[lastOutIndex] ?? null : null;
-  const lastOutLong = lastOutIndex >= 0 ? dbEntry.check_out_longitudes?.[lastOutIndex] ?? null : null;
-
+  // (rest of your record construction remains unchanged)
   const record: AttendanceRecord = {
-    // core
     day: weekday,
     date: dbEntry.attendance_date,
     attendance_date: dbEntry.attendance_date,
     hoursWorked: worked.toFixed(2),
     expectedHours: expected.toFixed(2),
-
-    // raw arrays and times (always present in the type; set null if no data)
-    first_check_in_time: rawFirst,
-    last_check_out_time: rawLast,
+    first_check_in_time: dbEntry.first_check_in_time ?? null,
+    last_check_out_time: dbEntry.last_check_out_time ?? null,
     check_in_latitudes: dbEntry.check_in_latitudes ?? null,
     check_in_longitudes: dbEntry.check_in_longitudes ?? null,
     check_out_latitudes: dbEntry.check_out_latitudes ?? null,
     check_out_longitudes: dbEntry.check_out_longitudes ?? null,
-
-    // extra metadata
     attendance_statuses: dbEntry.attendance_statuses ?? null,
     request_type: dbEntry.request_type ?? null,
     request_status: dbEntry.request_status ?? null,
-
-    // computed friendly objects
-    checkInLocation: rawFirst ? { lat: firstInLat, long: firstInLong, time: new Date(rawFirst).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) } : null,
-    checkOutLocation: rawLast ? { lat: lastOutLat, long: lastOutLong, time: new Date(rawLast).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) } : null,
-
-    // status
+    checkInLocation: dbEntry.first_check_in_time
+      ? {
+          lat: dbEntry.check_in_latitudes?.[0] ?? null,
+          long: dbEntry.check_in_longitudes?.[0] ?? null,
+          time: new Date(dbEntry.first_check_in_time).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        }
+      : null,
+    checkOutLocation: dbEntry.last_check_out_time
+      ? {
+          lat:
+            (dbEntry.check_out_latitudes?.length ?? 0) > 0
+              ? dbEntry.check_out_latitudes?.slice(-1)[0] ?? null
+              : null,
+          long:
+            (dbEntry.check_out_longitudes?.length ?? 0) > 0
+              ? dbEntry.check_out_longitudes?.slice(-1)[0] ?? null
+              : null,
+          time: new Date(dbEntry.last_check_out_time).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        }
+      : null,
     status,
   };
 
   transformed.push(record);
 } else {
-          const status = isWeekend ? (isFuture ? 'Incomplete' : 'Approved Off') : (isFuture ? 'Incomplete' : 'Absent');
-// fallback when no dbEntry
-transformed.push({
-  day: weekday,
-  date: formattedDate,
-  hoursWorked: '0.00',
-  expectedHours: '0.00',
-  status,
-  first_check_in_time: null,
-  last_check_out_time: null,
-  check_in_latitudes: null,
-  check_in_longitudes: null,
-  check_out_latitudes: null,
-  check_out_longitudes: null,
-  attendance_statuses: null,
-  request_type: null,
-  request_status: null,
-  checkInLocation: null,
-  checkOutLocation: null,
-} as AttendanceRecord);
+  // ✅ Fallback when no dbEntry at all
+  const status = isFuture
+    ? "Upcoming"
+    : isWeekend
+    ? "Approved Off"
+    : "Absent";
 
-        }
+  transformed.push({
+    day: weekday,
+    date: formattedDate,
+    hoursWorked: "0.00",
+    expectedHours: "0.00",
+    status,
+    first_check_in_time: null,
+    last_check_out_time: null,
+    check_in_latitudes: null,
+    check_in_longitudes: null,
+    check_out_latitudes: null,
+    check_out_longitudes: null,
+    attendance_statuses: null,
+    request_type: null,
+    request_status: null,
+    checkInLocation: null,
+    checkOutLocation: null,
+  } as AttendanceRecord);
+}
+
       }
 
       setAttendanceData(transformed);
@@ -376,10 +401,10 @@ transformed.push({
       let status: string;
       if (found) {
         if (isWeekend) status = "Approved Off";
-        else if (isFuture) status = "Incomplete";
+        else if (isFuture) status = "Upcoming";
         else status = found.status ?? 'Absent';
       } else {
-        status = isWeekend ? "Approved Off" : isFuture ? "Incomplete" : "Absent";
+        status = isWeekend ? "Approved Off" : isFuture ? "Upcoming" : "Absent";
       }
 
       // ---- Resolve times and lat/long (support both shapes) ----

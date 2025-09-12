@@ -147,17 +147,9 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({ attendanceData }) => 
         <tbody>
           {todayData.length > 0 ? (
             todayData.map((item, index) => {
-              // Default fallback based on times
-              let status = item.last_check_out_time
-                ? "Checked Out"
-                : item.first_check_in_time
-                ? "Checked In"
-                : "Absent";
+              // Always prefer backend-calculated statuses
+let status = item.attendance_statuses?.[0] || "Absent";
 
-              // Override from view-provided statuses
-              if (item.attendance_statuses?.length) {
-                status = item.attendance_statuses[0];
-              }
 
               const checkInLat = item.check_in_latitudes?.[0] ?? null;
               const checkInLong = item.check_in_longitudes?.[0] ?? null;

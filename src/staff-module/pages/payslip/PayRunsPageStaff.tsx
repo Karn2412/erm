@@ -3,7 +3,9 @@ import PaySlipCard from "../../components/payslip/PaySlipCard";
 import { supabase } from "../../../supabaseClient";
 import { useUser } from "../../../context/UserContext";
 import { FaDownload, FaCalendarAlt } from "react-icons/fa";
-import { usePayslipPdf } from "../../../utils/createPayslipPdf";
+import html2pdf from "html2pdf.js"; // ✅ import html2pdf
+import { fillTemplate } from "../../../utils/filledtemplate";
+
 
 interface PayrollHistory {
   id: string;
@@ -32,7 +34,7 @@ const PayRunsPage = () => {
   const [selectedQuarter, setSelectedQuarter] = useState(quarterOptions[0]);
   const [showAll, setShowAll] = useState(false);
   const { userData } = useUser();
-  const { createPayslipPdf } = usePayslipPdf();
+ 
 
   useEffect(() => {
     const fetchPayrolls = async () => {
@@ -62,16 +64,67 @@ const PayRunsPage = () => {
         return selectedQuarter.months.includes(m);
       });
 
-  const handleDownloadAll = () => {
-    filteredPayrolls.forEach((pay) => {
-      const doc = createPayslipPdf(pay);
-      const fileName = `Payslip_${new Date(pay.month).toLocaleDateString(
-        "en-IN",
-        { month: "short", year: "numeric" }
-      )}.pdf`;
-      doc.save(fileName);
+   // ✅ Updated: download all with html2pdf
+ const handleDownloadAll = async () => {
+  // 1. Load the template (only once outside the loop)
+  const { data: templateData, error } = await supabase
+    .from("templates")
+    .select("html_content")
+    .eq("is_default", true)
+    .eq("name", "Regular Payslip - Standard")
+    .single();
+
+  if (error || !templateData) {
+    console.error("❌ No template found", error);
+    return;
+  }
+
+  const templateHtml = templateData.html_content;
+
+  for (const pay of filteredPayrolls) {
+    // 2. Fill the template with payroll + user data
+    const filledTemplate = fillTemplate(templateHtml, {
+      company_initials: userData?.company_name?.slice(0, 2) || "CN",
+      company_name: userData?.company_name || "Company Name",
+      employee_id: userData?.id,
+      employee_name: userData?.name,
+      department: userData?.department || "N/A",
+      designation: userData?.designation || "N/A",
+      date_of_joining: userData?.date_of_joining || "N/A",
+      month: new Date(pay.month).toLocaleString("en-IN", {
+        month: "long",
+        year: "numeric",
+      }),
+      pay_date: new Date(pay.created_at).toLocaleDateString("en-IN"),
+      working_days: pay.working_days,
+      lop_days: 0,
+      bank_account: userData?.bank_account || "****1234",
+      base_pay: pay.base_pay,
+      incentives: pay.incentives,
+      reimbursements: pay.reimbursements,
+      total_earnings: pay.base_pay + pay.incentives + pay.reimbursements,
+      deductions: pay.deductions,
+      net_pay: pay.total_pay,
+      monthly_ctc: pay.monthly_ctc,
     });
-  };
+
+    // 3. Download PDF
+    const fileName = `Payslip_${new Date(pay.month).toLocaleDateString(
+      "en-IN",
+      { month: "short", year: "numeric" }
+    )}.pdf`;
+
+    const opt = {
+      margin: 0.5,
+      filename: fileName,
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+    };
+
+    await html2pdf().set(opt).from(filledTemplate).save();
+  }
+};
+
     
 
   return (

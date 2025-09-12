@@ -49,6 +49,8 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
         return "border-blue-500";
       case "Incomplete":
         return "border-gray-300";
+      case "Checked Out":
+        return "border-purple-500";
       default:
         return "border-gray-300";
     }
@@ -71,7 +73,7 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
       case "Incomplete":
         return "bg-gray-300";
       case "Checked Out":
-        return "bg-purple-500";  
+        return "bg-purple-500";
       default:
         return "bg-gray-300";
     }
@@ -144,14 +146,14 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
       for (let day = 1; day <= daysInMonth; day++) {
         const dateObj = new Date(selectedYear, selectedMonth, day);
         const formattedDate = format(dateObj, "yyyy-MM-dd");
-        const weekday = dateObj.toLocaleDateString("en-US", {
-          weekday: "long",
-        });
-        const dbEntry = data?.find(
-          (entry) => entry.attendance_date === formattedDate
-        );
-        const isWeekend = weekday === "Saturday" || weekday === "Sunday";
+        const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
+        const dbEntry = data?.find((entry) => entry.attendance_date === formattedDate);
+        console.log("Processing date:", formattedDate, "DB Entry:", dbEntry);
+
         const isFuture = dateObj > today;
+
+        console.log("Is future date:", formattedDate, isFuture);
+
 
         if (dbEntry) {
           const checkInLat = dbEntry.check_in_latitudes?.[0] ?? null;
@@ -161,49 +163,44 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
 
           const checkInTime = dbEntry.first_check_in_time
             ? new Date(dbEntry.first_check_in_time).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
+              hour: "2-digit",
+              minute: "2-digit",
+            })
             : null;
 
           const checkOutTime = dbEntry.last_check_out_time
             ? new Date(dbEntry.last_check_out_time).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
+              hour: "2-digit",
+              minute: "2-digit",
+            })
             : null;
 
-          let status = dbEntry.attendance_statuses?.[0] || "Absent";
+          // ✅ Trust backend
+          let status: string;
 
-          if (dbEntry.last_check_out_time) {
-  status = "Checked Out";
-} else if (dbEntry.first_check_in_time) {
-  status = "Checked In";
-}
+          if (Array.isArray(dbEntry?.attendance_statuses) && dbEntry.attendance_statuses.length > 0) {
+            status = dbEntry.attendance_statuses[0];
 
-          if (dbEntry.request_type && dbEntry.request_status === "APPROVED") {
-            switch (dbEntry.request_type) {
-              case "REGULARIZATION":
-                status = "Regularized";
-                break;
-              case "WFH":
-                status = "Work From Home";
-                break;
-              case "LEAVE":
-                status = "Approved Leave";
-                break;
-              case "APPROVED OFF":
-                status = "Approved Off";
-                break;
+            // 🔄 Override rule:
+            if (status === "Incomplete" && dateObj < today) {
+              status = "Absent"; // Past Incomplete → Absent
+            }
+          } else {
+            if (isFuture) {
+              status = "Incomplete"; // Future with no status → Incomplete
+            } else {
+              status = "Absent"; // Past with no status → Absent
             }
           }
+
+
 
           transformed.push({
             day: weekday,
             date: dbEntry.attendance_date,
             hoursWorked: dbEntry.total_worked_hours?.toFixed(2) ?? "0.00",
             expectedHours: dbEntry.expected_hours?.toFixed(2) ?? "0.00",
-            status: isWeekend ? "Approved Off" : isFuture ? "Incomplete" : status,
+            status,
             checkInLocation:
               checkInLat && checkInLong
                 ? { lat: checkInLat, long: checkInLong, time: checkInTime || "" }
@@ -217,18 +214,24 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
             isFuture,
           });
         } else {
+          // ✅ No DB entry at all
+          const status = isFuture ? "Incomplete" : "Absent"; // Explicitly set status based on whether the day is in the future
+
           transformed.push({
             day: weekday,
             date: formattedDate,
             hoursWorked: "0.00",
             expectedHours: "0.00",
-            status: isWeekend ? "Approved Off" : isFuture ? "Incomplete" : "Absent",
+            status,
             checkInLocation: null,
             checkOutLocation: null,
             isFuture,
           });
         }
       }
+
+
+
 
       setAttendanceData(transformed);
     };
@@ -276,92 +279,67 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {getCurrentWeekDates().map((item, index) => {
-                  const dateObj = new Date(item.date);
-                  const weekday = dateObj.toLocaleDateString("en-US", {
-                    weekday: "long",
-                  });
-                  const isWeekend = weekday === "Saturday" || weekday === "Sunday";
-                  const isFuture = dateObj > today;
-
-                  let status: string;
-                  if (item.status) {
-                    if (isWeekend) {
-                      status = "Approved Off";
-                    } else if (isFuture) {
-                      status = "Incomplete";
-                    } else {
-                      status = item.status;
-                    }
-                  } else {
-                    status = isWeekend
-                      ? "Approved Off"
-                      : isFuture
-                      ? "Incomplete"
-                      : "Absent";
-                  }
-
-                  return (
-                    <tr
-                      key={index}
-                      className={`shadow-sm rounded-lg ${
-                        index % 2 === 0 ? "bg-blue-50" : "bg-indigo-50"
+                {getCurrentWeekDates().map((item, index) => (
+                  <tr
+                    key={index}
+                    className={`shadow-sm rounded-lg ${index % 2 === 0 ? "bg-blue-50" : "bg-indigo-50"
                       } hover:bg-blue-100`}
-                    >
-                      <td className="py-2 px-3 rounded-l-lg">{item.day}</td>
-                      <td className="py-2 px-3">{item.date}</td>
-                      <td className="py-2 px-3 text-blue-600 hover:text-blue-800">
-                        {item.checkInLocation ? (
-                          <a
-                            href={`https://www.google.com/maps?q=${item.checkInLocation.lat},${item.checkInLocation.long}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1"
-                          >
-                            <FaMapMarkerAlt className="text-red-500" />{" "}
-                            {item.checkInLocation.time || "View"}
-                          </a>
-                        ) : (
-                          "--"
-                        )}
-                      </td>
-                      <td className="py-2 px-3">
-                        <div className="flex items-center space-x-1">
-                          <div
-                            className={`w-3 h-3 rounded-full ${getColorBg(status)}`}
-                          ></div>
-                          <span className="text-xs text-gray-600">
-                            {item.hoursWorked} / {item.expectedHours}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-2 px-3 text-blue-600 hover:text-blue-800">
-                        {item.checkOutLocation ? (
-                          <a
-                            href={`https://www.google.com/maps?q=${item.checkOutLocation.lat},${item.checkOutLocation.long}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1"
-                          >
-                            <FaMapMarkerAlt className="text-green-500" />{" "}
-                            {item.checkOutLocation.time || "View"}
-                          </a>
-                        ) : (
-                          "--"
-                        )}
-                      </td>
-                      <td className="py-2 px-3">{item.hoursWorked}</td>
-                      <td className="py-2 px-3 rounded-r-lg">
-                        {status}
-                        {item.requestType && item.requestStatus === "APPROVED" && (
-                          <span className="ml-2 px-2 py-1 rounded bg-green-200 text-green-700 text-xs font-semibold">
-                            {item.requestType}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                  >
+                    <td className="py-2 px-3 rounded-l-lg">{item.day}</td>
+                    <td className="py-2 px-3">{item.date}</td>
+                    <td className="py-2 px-3 text-blue-600 hover:text-blue-800">
+                      {item.checkInLocation ? (
+                        <a
+                          href={`https://www.google.com/maps?q=${item.checkInLocation.lat},${item.checkInLocation.long}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1"
+                        >
+                          <FaMapMarkerAlt className="text-red-500" />{" "}
+                          {item.checkInLocation.time || "View"}
+                        </a>
+                      ) : (
+                        "--"
+                      )}
+                    </td>
+                    <td className="py-2 px-3">
+                      <div className="flex items-center space-x-1">
+                        <div
+                          className={`w-3 h-3 rounded-full ${getColorBg(
+                            item.status
+                          )}`}
+                        ></div>
+                        <span className="text-xs text-gray-600">
+                          {item.hoursWorked} / {item.expectedHours}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-2 px-3 text-blue-600 hover:text-blue-800">
+                      {item.checkOutLocation ? (
+                        <a
+                          href={`https://www.google.com/maps?q=${item.checkOutLocation.lat},${item.checkOutLocation.long}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1"
+                        >
+                          <FaMapMarkerAlt className="text-green-500" />{" "}
+                          {item.checkOutLocation.time || "View"}
+                        </a>
+                      ) : (
+                        "--"
+                      )}
+                    </td>
+                    <td className="py-2 px-3">{item.hoursWorked}</td>
+                    <td className="py-2 px-3 rounded-r-lg">
+                      {item.status}
+                      {item.requestType && item.requestStatus === "APPROVED" && (
+                        <span className="ml-2 px-2 py-1 rounded bg-green-200 text-green-700 text-xs font-semibold">
+                          {item.requestType}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           ) : (
@@ -393,28 +371,8 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
                     const date = new Date(selectedYear, selectedMonth, day);
                     const formatted = format(date, "yyyy-MM-dd");
                     const found = attendanceData.find((d) => d.date === formatted);
-                    const isFuture = date > today;
-                    const weekday = date.toLocaleDateString("en-US", {
-                      weekday: "long",
-                    });
-                    const isWeekend = weekday === "Saturday" || weekday === "Sunday";
 
-                    let status: string;
-                    if (found) {
-                      if (isWeekend) {
-                        status = "Approved Off";
-                      } else if (isFuture) {
-                        status = "Incomplete";
-                      } else {
-                        status = found.status;
-                      }
-                    } else {
-                      status = isWeekend
-                        ? "Approved Off"
-                        : isFuture
-                        ? "Incomplete"
-                        : "Absent";
-                    }
+                    const status = found?.status || "Incomplete";
 
                     calendarDays.push(
                       <div
@@ -427,13 +385,13 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
                         <div className="flex justify-between px-2 pt-2 text-sm font-medium text-gray-800">
                           <span>{day}</span>
                           <div className="flex gap-1">
-                            {!isFuture && found?.checkInLocation && (
+                            {found?.checkInLocation && (
                               <span className="flex items-center gap-1 text-xs text-gray-600">
                                 <FaMapMarkerAlt className="text-red-500" />
                                 {found.checkInLocation.time}
                               </span>
                             )}
-                            {!isFuture && found?.checkOutLocation && (
+                            {found?.checkOutLocation && (
                               <span className="flex items-center gap-1 text-xs text-gray-600">
                                 <FaMapMarkerAlt className="text-green-500" />
                                 {found.checkOutLocation.time}
@@ -441,15 +399,6 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
                             )}
                           </div>
                         </div>
-
-                        {/* Center with hours
-                        <div className="text-center text-xs px-2">
-                          {!isFuture && found?.hoursWorked !== "0.00"
-                            ? `${found?.hoursWorked} / ${found?.expectedHours} hrs`
-                            : isFuture
-                            ? `${found?.expectedHours || "0.00"} hrs expected`
-                            : null}
-                        </div> */}
 
                         {/* Status footer */}
                         <div

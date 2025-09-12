@@ -1,24 +1,43 @@
+import html2pdf from 'html2pdf.js';
 import React from 'react';
 import { FaTimes, FaDownload } from 'react-icons/fa';
-import jsPDF from 'jspdf';
+
+
 
 interface PayslipPreviewModalProps {
   onClose: () => void;
   month: string;
+  payroll: any;
+   filledTemplate: string;
   htmlContent: string;
 }
 
-const PayslipPreviewModal: React.FC<PayslipPreviewModalProps> = ({ onClose, month, htmlContent }) => {
-  const handleDownload = () => {
-    const doc = new jsPDF("p", "pt", "a4");
-    doc.html(htmlContent, {
-      callback: function (doc) {
-        doc.save(`Payslip_${month}.pdf`);
-      },
-      x: 20,
-      y: 20,
-      width: 550,
-    });
+const PayslipPreviewModal: React.FC<PayslipPreviewModalProps> = ({
+  onClose,
+  
+  payroll,
+  filledTemplate,
+  htmlContent,
+
+}) => {
+
+
+   const handleDownload = () => {
+    if (!filledTemplate) return;
+
+    const fileName = `Payslip_${new Date(payroll.month).toLocaleDateString(
+      "en-IN",
+      { month: "short", year: "numeric" }
+    )}.pdf`;
+
+    const opt = {
+      margin: 0.5,
+      filename: fileName,
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+    };
+
+    html2pdf().set(opt).from(filledTemplate).save();
   };
 
   return (
