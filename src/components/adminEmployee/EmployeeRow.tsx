@@ -70,7 +70,7 @@ const EmployeeRow: React.FC<Props> = ({ employee, index, onOpenModal }) => {
     <div className="flex items-center justify-between text-red-600 bg-red-50 px-3 py-1 rounded-lg text-sm">
       <div className="flex items-center gap-2">
         <FaExclamationCircle />
-        <span>This employee’s personal information is incomplete.</span>
+        <span>This employee’s personal information is</span>
       </div>
       <span className="text-blue-800 font-medium">Incomplete</span>
     </div>

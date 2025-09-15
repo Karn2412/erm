@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { MdApartment } from "react-icons/md";
-import { FaMapMarkerAlt, FaUserTie, FaFilter, FaChevronDown } from "react-icons/fa";
+import { FaMapMarkerAlt, FaUserTie, FaFilter, FaChevronDown, FaCheck } from "react-icons/fa";
 import { supabase } from "../../supabaseClient";
 import { useUser } from "../../context/UserContext";
 
@@ -19,17 +19,14 @@ interface WorkLocation {
 }
 
 const EmployeeFilters = ({
-  
+  department,
   setDepartment,
-  
+  designation,
   setDesignation,
- 
+  workLocation,
   setWorkLocation,
-  activeEmployees,
-  inactiveEmployees,
-  setSearch,
-
-  
+  statusFilter,
+  setStatusFilter,   // 👈 new prop
 }: {
   department: string;
   setDepartment: (val: string) => void;
@@ -37,9 +34,8 @@ const EmployeeFilters = ({
   setDesignation: (val: string) => void;
   workLocation: string;
   setWorkLocation: (val: string) => void;
-  activeEmployees: any[];
-  inactiveEmployees: any[];
-  setSearch: (val: string) => void;
+  statusFilter: "all" | "active" | "inactive";
+  setStatusFilter: (val: "all" | "active" | "inactive") => void;
 }) => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [designations, setDesignations] = useState<Designation[]>([]);
@@ -93,12 +89,7 @@ const EmployeeFilters = ({
     setOpenDropdown(openDropdown === name ? null : name);
   };
 
-  // helper when clicking a person in More Filters
-  const handleClickPerson = (name: string | undefined) => {
-    if (!name) return;
-    setSearch(name);
-    setOpenDropdown(null);
-  };
+  
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -123,18 +114,36 @@ const EmployeeFilters = ({
         {openDropdown === "work" && (
           <div className="absolute top-full left-0 mt-2 w-full bg-white shadow rounded-xl z-10">
             <div
-              className="px-4 py-2 hover:bg-violet-50 cursor-pointer"
-              onClick={() => setWorkLocation("")}
+              className={`px-4 py-2 flex items-center justify-between cursor-pointer ${
+                workLocation === ""
+                  ? "bg-violet-200 font-semibold text-violet-700"
+                  : "hover:bg-violet-50"
+              }`}
+              onClick={() => {
+                setWorkLocation("");
+                setOpenDropdown(null);
+              }}
             >
-              All
+              <span>All</span>
+              {workLocation === "" && <FaCheck className="text-violet-600 text-xs" />}
             </div>
             {workLocations.map((loc) => (
               <div
                 key={loc.id}
-                className="px-4 py-2 hover:bg-violet-50 cursor-pointer"
-                onClick={() => setWorkLocation(loc.id)}
+                className={`px-4 py-2 flex items-center justify-between cursor-pointer ${
+                  workLocation === loc.id
+                    ? "bg-violet-200 font-semibold text-violet-700"
+                    : "hover:bg-violet-50"
+                }`}
+                onClick={() => {
+                  setWorkLocation(loc.id);
+                  setOpenDropdown(null);
+                }}
               >
-                {loc.name}
+                <span>{loc.name}</span>
+                {workLocation === loc.id && (
+                  <FaCheck className="text-violet-600 text-xs" />
+                )}
               </div>
             ))}
           </div>
@@ -162,18 +171,36 @@ const EmployeeFilters = ({
         {openDropdown === "department" && (
           <div className="absolute top-full left-0 mt-2 w-full bg-white shadow rounded-xl z-10">
             <div
-              className="px-4 py-2 hover:bg-blue-50 cursor-pointer"
-              onClick={() => setDepartment("")}
+              className={`px-4 py-2 flex items-center justify-between cursor-pointer ${
+                department === ""
+                  ? "bg-blue-200 font-semibold text-blue-700"
+                  : "hover:bg-blue-50"
+              }`}
+              onClick={() => {
+                setDepartment("");
+                setOpenDropdown(null);
+              }}
             >
-              All
+              <span>All</span>
+              {department === "" && <FaCheck className="text-blue-600 text-xs" />}
             </div>
             {departments.map((dep) => (
               <div
                 key={dep.id}
-                className="px-4 py-2 hover:bg-blue-50 cursor-pointer"
-                onClick={() => setDepartment(dep.id)}
+                className={`px-4 py-2 flex items-center justify-between cursor-pointer ${
+                  department === dep.id
+                    ? "bg-blue-200 font-semibold text-blue-700"
+                    : "hover:bg-blue-50"
+                }`}
+                onClick={() => {
+                  setDepartment(dep.id);
+                  setOpenDropdown(null);
+                }}
               >
-                {dep.department_name}
+                <span>{dep.department_name}</span>
+                {department === dep.id && (
+                  <FaCheck className="text-blue-600 text-xs" />
+                )}
               </div>
             ))}
           </div>
@@ -201,91 +228,115 @@ const EmployeeFilters = ({
         {openDropdown === "designation" && (
           <div className="absolute top-full left-0 mt-2 w-full bg-white shadow rounded-xl z-10">
             <div
-              className="px-4 py-2 hover:bg-red-50 cursor-pointer"
-              onClick={() => setDesignation("")}
+              className={`px-4 py-2 flex items-center justify-between cursor-pointer ${
+                designation === ""
+                  ? "bg-red-200 font-semibold text-red-700"
+                  : "hover:bg-red-50"
+              }`}
+              onClick={() => {
+                setDesignation("");
+                setOpenDropdown(null);
+              }}
             >
-              All
+              <span>All</span>
+              {designation === "" && <FaCheck className="text-red-600 text-xs" />}
             </div>
             {designations.map((des) => (
               <div
                 key={des.id}
-                className="px-4 py-2 hover:bg-red-50 cursor-pointer"
-                onClick={() => setDesignation(des.id)}
+                className={`px-4 py-2 flex items-center justify-between cursor-pointer ${
+                  designation === des.id
+                    ? "bg-red-200 font-semibold text-red-700"
+                    : "hover:bg-red-50"
+                }`}
+                onClick={() => {
+                  setDesignation(des.id);
+                  setOpenDropdown(null);
+                }}
               >
-                {des.designation}
+                <span>{des.designation}</span>
+                {designation === des.id && (
+                  <FaCheck className="text-red-600 text-xs" />
+                )}
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* More Filters */}
-      <div className="relative flex items-center justify-between bg-pink-100 px-4 py-3 rounded-2xl shadow cursor-pointer">
-        <div className="flex items-center gap-2">
-          <FaFilter className="text-pink-600 text-lg" />
-          <span className="text-sm font-semibold text-gray-700">
-            More Filters
-          </span>
-        </div>
-        <button
-          onClick={() => toggleDropdown("more")}
-          className="w-7 h-7 rounded-full border border-pink-400 flex items-center justify-center bg-white"
+     
+    {/* More Filters */}
+  <div className="relative flex items-center justify-between bg-pink-100 px-4 py-3 rounded-2xl shadow cursor-pointer">
+    <div className="flex items-center gap-2">
+      <FaFilter className="text-pink-600 text-lg" />
+      <span className="text-sm font-semibold text-gray-700">
+        More Filters
+      </span>
+    </div>
+    <button
+      onClick={() => toggleDropdown("more")}
+      className="w-7 h-7 rounded-full border border-pink-400 flex items-center justify-center bg-white"
+    >
+      <FaChevronDown
+        className={`text-xs text-pink-600 transition-transform ${
+          openDropdown === "more" ? "rotate-180" : ""
+        }`}
+      />
+    </button>
+
+    {openDropdown === "more" && (
+      <div className="absolute top-full left-0 mt-2 w-full bg-white shadow rounded-xl z-10">
+        {/* All Members */}
+        <div
+          className={`px-4 py-2 flex items-center justify-between cursor-pointer ${
+            statusFilter === "all"
+              ? "bg-pink-200 font-semibold text-pink-700"
+              : "hover:bg-pink-50"
+          }`}
+          onClick={() => {
+            setStatusFilter("all");
+            setOpenDropdown(null);
+          }}
         >
-          <FaChevronDown
-            className={`text-xs text-pink-600 transition-transform ${
-              openDropdown === "more" ? "rotate-180" : ""
-            }`}
-          />
-        </button>
+          <span>All Members</span>
+          {statusFilter === "all" && <FaCheck className="text-pink-600 text-xs" />}
+        </div>
 
-        {openDropdown === "more" && (
-          <div className="absolute top-full left-0 mt-2 w-full bg-white shadow rounded-xl z-10">
-            {/* Active Members */}
-            {activeEmployees && activeEmployees.length > 0 && (
-              <div className="border-b border-gray-200">
-                <div className="px-4 py-2 font-semibold text-gray-700 bg-green-50">
-                  Active Members
-                </div>
-                {activeEmployees.map(emp => (
-                  <div
-                    key={emp.id}
-                    className="px-4 py-2 hover:bg-green-100 cursor-pointer text-sm"
-                    onClick={() => handleClickPerson(emp.name)}
-                  >
-                    {emp.name}
-                  </div>
-                ))}
-              </div>
-            )}
+        {/* Active Members */}
+        <div
+          className={`px-4 py-2 flex items-center justify-between cursor-pointer ${
+            statusFilter === "active"
+              ? "bg-green-200 font-semibold text-green-700"
+              : "hover:bg-green-50"
+          }`}
+          onClick={() => {
+            setStatusFilter("active");
+            setOpenDropdown(null);
+          }}
+        >
+          <span>Active Members</span>
+          {statusFilter === "active" && <FaCheck className="text-green-600 text-xs" />}
+        </div>
 
-            {/* Inactive Members */}
-            {inactiveEmployees && inactiveEmployees.length > 0 && (
-              <div>
-                <div className="px-4 py-2 font-semibold text-gray-700 bg-gray-50">
-                  Inactive Members
-                </div>
-                {inactiveEmployees.map(emp => (
-                  <div
-                    key={emp.id}
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-500"
-                    onClick={() => handleClickPerson(emp.name)}
-                  >
-                    {emp.name}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* If no data */}
-            {(!activeEmployees || activeEmployees.length === 0) &&
-              (!inactiveEmployees || inactiveEmployees.length === 0) && (
-                <div className="px-4 py-3 text-sm text-gray-500">
-                  No members to show
-                </div>
-              )}
-          </div>
-        )}
+        {/* Inactive Members */}
+        <div
+          className={`px-4 py-2 flex items-center justify-between cursor-pointer ${
+            statusFilter === "inactive"
+              ? "bg-gray-200 font-semibold text-gray-700"
+              : "hover:bg-gray-50"
+          }`}
+          onClick={() => {
+            setStatusFilter("inactive");
+            setOpenDropdown(null);
+          }}
+        >
+          <span>Inactive Members</span>
+          {statusFilter === "inactive" && <FaCheck className="text-gray-600 text-xs" />}
+        </div>
       </div>
+    )}
+  </div>
+
     </div>
   );
 };

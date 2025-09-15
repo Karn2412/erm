@@ -79,7 +79,7 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
             reimbursements,
             total_pay
           `)
-          .eq("month", selectedMonth); // ⚡ match YYYY-MM
+          .eq("month", `${selectedMonth}-01`); // ✅ FIXED: match full date
 
         if (histErr) {
           console.error("❌ History payroll error:", histErr);
@@ -124,7 +124,7 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
       const { data } = await supabase
         .from("payroll_history_view")
         .select("user_id")
-        .eq("month", selectedMonth) // ⚡ match YYYY-MM
+        .eq("month", `${selectedMonth}-01`) // ✅ FIX
         .limit(1);
 
       setAlreadyApproved((data?.length ?? 0) > 0);

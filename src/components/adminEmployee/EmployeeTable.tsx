@@ -24,9 +24,10 @@ const EmployeeTable: React.FC<{
   department: string;
   designation: string;
   workLocation: string;
+  statusFilter: "all" | "active" | "inactive";
   setActiveEmployees: (emps: Employee[]) => void;
   setInactiveEmployees: (emps: Employee[]) => void;
-}> = ({ search, department, designation, workLocation, setActiveEmployees, setInactiveEmployees }) => {
+}> = ({ search, department, designation, workLocation, setActiveEmployees, setInactiveEmployees, statusFilter }) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
   const { userData } = useUser();
@@ -79,20 +80,28 @@ const EmployeeTable: React.FC<{
       return;
     }
 
-    const formatted = (data || []).map((emp: any) => ({
-      id: emp.auth_id,
-      name: emp.name,
-      email: emp.email,
-      number: emp.number,
-      department_name: emp.department_name,
-      company_id: emp.company_id,
-      status: emp.is_active,
-      avatar: emp.gender_avatar || "https://dummyimage.com/100x100/cccccc/000000&text=User",
-      designation_id: emp.designation_id,
-      location_id: emp.location_id,
-      work_location: emp.work_location,
-      profile_status: emp.profile_status, 
-    }));
+    let formatted = (data || []).map((emp: any) => ({
+  id: emp.auth_id,
+  name: emp.name,
+  email: emp.email,
+  number: emp.number,
+  department_name: emp.department_name,
+  company_id: emp.company_id,
+  status: emp.is_active,
+  avatar: emp.gender_avatar || "https://dummyimage.com/100x100/cccccc/000000&text=User",
+  designation_id: emp.designation_id,
+  location_id: emp.location_id,
+  work_location: emp.work_location,
+  profile_status: emp.profile_status,
+}));
+
+
+    // 🔥 Apply statusFilter here
+if (statusFilter === "active") {
+  formatted = formatted.filter((emp: Employee) => emp.status);
+} else if (statusFilter === "inactive") {
+  formatted = formatted.filter((emp: Employee) => !emp.status);
+}
 
     // produce active/inactive lists for More Filters
     const activeList = formatted.filter((f: any) => f.status).map((f: any) => ({ id: f.id, name: f.name }));
@@ -112,7 +121,7 @@ const EmployeeTable: React.FC<{
   useEffect(() => {
     fetchEmployees();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userData, search, department, designation, workLocation]);
+  }, [userData, search, department, designation, workLocation, statusFilter]);
 
   return (
     <div className="bg-white rounded-lg shadow-sm max-h-120 overflow-y-auto">

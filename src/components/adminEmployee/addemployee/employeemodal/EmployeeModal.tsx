@@ -333,263 +333,271 @@ const EmployeeModal = ({
     );
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-    >
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-gray-700">Employee Details</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <FaTimes className="w-5 h-5" />
-          </button>
-        </div>
+  <div
+  className="fixed inset-0 flex items-center justify-center p-4 z-50"
+  style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}
+>
+  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-8 max-h-[90vh] overflow-y-auto border border-gray-100">
+    {/* Header */}
+    <div className="flex items-center justify-between mb-6">
+      <h2 className="text-2xl font-bold text-gray-800">Employee Details</h2>
+      <button
+        onClick={onClose}
+        className="text-gray-500 hover:text-gray-700 transition"
+      >
+        <FaTimes className="w-6 h-6" />
+      </button>
+    </div>
 
-        {/* Personal Info Form */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-          {["name", "number", "email", "password"].map((field) => (
-            <input
-              key={field}
-              name={field}
-              type={field === "password" ? "password" : "text"}
-              value={form[field as keyof typeof form]}
-              onChange={handleChange}
-              placeholder={
-                field === "password"
-                  ? "New Password"
-                  : field.charAt(0).toUpperCase() + field.slice(1)
-              }
-              className="w-full p-2 rounded-lg border border-blue-300"
-            />
+    {/* Personal Info */}
+    <h3 className="text-lg font-semibold text-gray-800 mb-3">
+      Personal Information
+    </h3>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+      {["name", "number", "email", "password"].map((field) => (
+        <input
+          key={field}
+          name={field}
+          type={field === "password" ? "password" : "text"}
+          value={form[field as keyof typeof form]}
+          onChange={handleChange}
+          placeholder={
+            field === "password"
+              ? "New Password"
+              : field.charAt(0).toUpperCase() + field.slice(1)
+          }
+          className="w-full p-3 rounded-full border border-blue-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+        />
+      ))}
+    </div>
+
+    {/* Current Working Hours */}
+    <h3 className="text-lg font-semibold text-gray-800 mb-2">
+      Current Working Hours
+    </h3>
+    <p className="text-gray-700 text-sm bg-blue-50 p-3 rounded-lg mb-6">
+      <b>Start:</b> {secondsToTime(workHours?.work_start)} <br />
+      <b>End:</b> {secondsToTime(workHours?.work_end)} <br />
+      <b>Last Updated:</b>{" "}
+      {workHours ? new Date(workHours.created_at).toLocaleDateString() : "-"}
+    </p>
+
+    {/* Update Working Hours */}
+    <h3 className="text-lg font-semibold text-gray-800 mb-3">
+      Update Working Hours
+    </h3>
+    <div className="grid grid-cols-2 gap-4 mb-8">
+      <input
+        type="time"
+        value={workStart}
+        onChange={(e) => setWorkStart(e.target.value)}
+        className="p-3 border border-blue-300 rounded-full focus:ring-2 focus:ring-blue-400"
+      />
+      <input
+        type="time"
+        value={workEnd}
+        onChange={(e) => setWorkEnd(e.target.value)}
+        className="p-3 border border-blue-300 rounded-full focus:ring-2 focus:ring-blue-400"
+      />
+    </div>
+
+    {/* Salary */}
+    <h3 className="text-lg font-semibold text-gray-800 mb-3">
+      Salary Details
+    </h3>
+    <div className="grid grid-cols-2 gap-4 mb-8">
+      <input
+        type="number"
+        placeholder="Amount"
+        value={salaryAmount}
+        onChange={(e) => setSalaryAmount(e.target.value)}
+        className="p-3 border border-blue-300 rounded-full focus:ring-2 focus:ring-blue-400"
+      />
+      <select
+        value={salaryCurrency}
+        onChange={(e) => setSalaryCurrency(e.target.value)}
+        className="p-3 border border-blue-300 rounded-full focus:ring-2 focus:ring-blue-400"
+      >
+        <option value="INR">INR</option>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+      </select>
+    </div>
+
+    {/* Allocated Assets */}
+    <h3 className="text-lg font-semibold text-gray-800 mb-3">
+      Allocated Assets
+    </h3>
+    <ul className="list-disc list-inside text-gray-700 text-sm space-y-2 mb-6">
+      {assetList.map((a, idx) => (
+        <li key={idx} className="bg-blue-50 p-3 rounded-lg border">
+          <b>Asset:</b> {a.name} <br />
+          {uniqueAsset && idx === 0 && (
+            <span>
+              <b>Unique:</b> {uniqueAsset}
+            </span>
+          )}
+        </li>
+      ))}
+    </ul>
+
+    {/* Update Asset Allocation */}
+    <h3 className="text-lg font-semibold text-gray-800 mb-3">
+      Update Asset Allocation
+    </h3>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+      {availableAssets.map((asset) => (
+        <label key={asset.id} className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            checked={assetList.some((a) => a.asset_id === asset.id)}
+            onChange={() => {
+              setAssetList((prev) => {
+                const exists = prev.find((a) => a.asset_id === asset.id);
+                if (exists)
+                  return prev.filter((a) => a.asset_id !== asset.id);
+                return [...prev, { asset_id: asset.id, name: asset.name }];
+              });
+            }}
+            className="rounded-full text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-gray-700">{asset.name}</span>
+        </label>
+      ))}
+    </div>
+    <input
+      type="text"
+      placeholder="Unique Asset"
+      value={uniqueAsset}
+      onChange={(e) => setUniqueAsset(e.target.value)}
+      className="p-3 border border-blue-300 rounded-full w-full focus:ring-2 focus:ring-blue-400 mb-8"
+    />
+
+    {/* Re-Allocate Asset */}
+    <h3 className="text-lg font-semibold text-gray-800 mb-3">
+      Re-Allocate Asset
+    </h3>
+    <div className="grid grid-cols-2 gap-4 mb-4">
+      <select
+        value={relocateAsset}
+        onChange={(e) => setRelocateAsset(e.target.value)}
+        className="p-3 border border-blue-300 rounded-full focus:ring-2 focus:ring-blue-400"
+      >
+        <option value="">Select Asset</option>
+        {assetList.map((a) => (
+          <option key={a.asset_id} value={a.asset_id}>
+            {a.name}
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={relocateTo}
+        onChange={(e) => setRelocateTo(e.target.value)}
+        className="p-3 border border-blue-300 rounded-full focus:ring-2 focus:ring-blue-400"
+      >
+        <option value="">Select Employee</option>
+        {allEmployees
+          .filter((emp) => emp.id !== employee.id)
+          .map((emp) => (
+            <option key={emp.id} value={emp.id}>
+              {emp.name}
+            </option>
+          ))}
+      </select>
+    </div>
+
+    <button
+      onClick={handleRelocate}
+      className="bg-indigo-600 text-white px-5 py-2.5 rounded-full hover:bg-indigo-700 transition mb-8"
+    >
+      Relocate Asset
+    </button>
+
+    {/* Personal Details */}
+    <h3 className="text-lg font-semibold text-gray-800 mb-3">
+      Personal Details
+    </h3>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700 mb-6">
+      {details &&
+        Object.entries(details)
+          .filter(([key]) => key !== "documents" && key !== "auth_id")
+          .map(([key, value]) => (
+            <p
+              key={key}
+              className="bg-blue-50 p-3 rounded-lg border text-gray-800"
+            >
+              <b>{key.replace(/_/g, " ").toUpperCase()}:</b>{" "}
+              {String(value || "-")}
+            </p>
+          ))}
+    </div>
+
+    {/* Documents */}
+    {details?.documents && details.documents.length > 0 && (
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold text-gray-800 mb-3">
+          Uploaded Documents
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {details.documents.map((doc: any) => (
+            <div
+              key={doc.name}
+              className="flex flex-col items-center bg-blue-50 p-3 rounded-lg border hover:shadow-md transition"
+            >
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                {doc.name}
+              </p>
+              <img
+                src={doc.url}
+                alt={doc.name}
+                className="w-28 h-28 object-cover rounded-lg cursor-pointer hover:opacity-90 transition"
+                onClick={() => setPreviewImage(doc.url)}
+              />
+            </div>
           ))}
         </div>
-
-        {/* Working Hours */}
-        <div className="border-t pt-4 mt-3">
-          <h3 className="text-lg font-semibold mb-2">Add Working Hours</h3>
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <input
-              type="time"
-              value={workStart}
-              onChange={(e) => setWorkStart(e.target.value)}
-              className="p-2 border border-blue-300 rounded-lg"
-            />
-            <input
-              type="time"
-              value={workEnd}
-              onChange={(e) => setWorkEnd(e.target.value)}
-              className="p-2 border border-blue-300 rounded-lg"
-            />
-          </div>
-        </div>
-
-        {/* Salary */}
-        <div className="border-t pt-4 mt-3">
-          <h3 className="text-lg font-semibold mb-2">Add Salary Details</h3>
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <input
-              type="number"
-              placeholder="Amount"
-              value={salaryAmount}
-              onChange={(e) => setSalaryAmount(e.target.value)}
-              className="p-2 border border-blue-300 rounded-lg"
-            />
-            <select
-              value={salaryCurrency}
-              onChange={(e) => setSalaryCurrency(e.target.value)}
-              className="p-2 border border-blue-300 rounded-lg"
-            >
-              <option value="INR">INR</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Asset Allocation */}
-        <div className="border-t pt-4 mt-3">
-          <h3 className="text-lg font-semibold mb-2">
-            Update Asset Allocation
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-            {availableAssets.map((asset) => (
-              <label key={asset.id} className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={assetList.some((a) => a.asset_id === asset.id)}
-                  onChange={() => {
-                    setAssetList((prev) => {
-                      const exists = prev.find((a) => a.asset_id === asset.id);
-                      if (exists)
-                        return prev.filter((a) => a.asset_id !== asset.id);
-                      return [
-                        ...prev,
-                        { asset_id: asset.id, name: asset.name },
-                      ];
-                    });
-                  }}
-                />
-                <span>{asset.name}</span>
-              </label>
-            ))}
-          </div>
-          <input
-            type="text"
-            placeholder="Unique Asset"
-            value={uniqueAsset}
-            onChange={(e) => setUniqueAsset(e.target.value)}
-            className="p-2 border border-blue-300 rounded-lg w-full"
-          />
-        </div>
-
-        {/* Relocate Asset */}
-        <div className="border-t pt-4 mt-3">
-          <h3 className="text-lg font-semibold mb-2">Re-Allocate Asset</h3>
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <select
-              value={relocateAsset}
-              onChange={(e) => setRelocateAsset(e.target.value)}
-              className="p-2 border border-blue-300 rounded-lg"
-            >
-              <option value="">Select Asset</option>
-              {assetList.map((a) => (
-                <option key={a.asset_id} value={a.asset_id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={relocateTo}
-              onChange={(e) => setRelocateTo(e.target.value)}
-              className="p-2 border border-blue-300 rounded-lg"
-            >
-              <option value="">Select Employee</option>
-              {allEmployees
-                .filter((emp) => emp.id !== employee.id)
-                .map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.name}
-                  </option>
-                ))}
-            </select>
-          </div>
-
-          <button
-            onClick={handleRelocate}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
-          >
-            Relocate Asset
-          </button>
-        </div>
-
-        {/* Current Working Hours */}
-        <div className="border-t pt-4 mt-3">
-          <h3 className="text-lg font-semibold mb-2">Current Working Hours</h3>
-          <p className="text-gray-700 text-sm">
-            <b>Start:</b> {secondsToTime(workHours?.work_start)} <br />
-            <b>End:</b> {secondsToTime(workHours?.work_end)} <br />
-            <b>Last Updated:</b>{" "}
-            {workHours
-              ? new Date(workHours.created_at).toLocaleDateString()
-              : "-"}
-          </p>
-        </div>
-
-        {/* Allocated Assets */}
-        <div className="border-t pt-4 mt-3">
-          <h3 className="text-lg font-semibold mb-2">Allocated Assets</h3>
-          <ul className="list-disc list-inside text-gray-700 text-sm">
-            {assetList.map((a, idx) => (
-              <li key={idx}>
-                <b>Asset:</b> {a.name} <br />
-                {uniqueAsset && idx === 0 && (
-                  <span>
-                    <b>Unique:</b> {uniqueAsset}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Personal Details */}
-        <div className="border-t pt-4 mt-3">
-          <h3 className="text-lg font-semibold mb-2">Personal Details</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-700">
-            {details &&
-              Object.entries(details)
-                .filter(([key]) => key !== "documents" && key !== "auth_id")
-                .map(([key, value]) => (
-                  <p key={key}>
-                    <b>{key.replace(/_/g, " ").toUpperCase()}:</b>{" "}
-                    {String(value || "-")}
-                  </p>
-                ))}
-          </div>
-
-          {/* Documents */}
-          {details?.documents && details.documents.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-lg font-semibold mb-2">Uploaded Documents</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {details.documents.map((doc: any) => (
-                  <div key={doc.name} className="flex flex-col items-center">
-                    <p className="text-sm font-medium">{doc.name}</p>
-                    <img
-                      src={doc.url}
-                      alt={doc.name}
-                      className="w-28 h-28 object-cover rounded-lg cursor-pointer hover:opacity-80"
-                      onClick={() => setPreviewImage(doc.url)}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Buttons */}
-        <div className="mt-5 flex flex-wrap gap-3 justify-between">
-          <button
-            onClick={handleSaveChanges}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 w-full sm:w-auto"
-          >
-            Save Changes
-          </button>
-          <button
-            onClick={handleDelete}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 w-full sm:w-auto"
-          >
-            Delete
-          </button>
-          <button
-            onClick={onClose}
-            className="bg-gray-400 text-white px-4 py-2 rounded-lg w-full sm:w-auto"
-          >
-            Close
-          </button>
-        </div>
       </div>
+    )}
 
-      {/* Image Preview */}
-      {previewImage && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
-          onClick={() => setPreviewImage(null)}
-        >
-          <img
-            src={previewImage}
-            alt="Preview"
-            className="max-w-[90%] max-h-[90%] rounded-lg shadow-lg"
-          />
-        </div>
-      )}
+    {/* Buttons */}
+    <div className="mt-6 flex flex-wrap gap-4 justify-end">
+      <button
+        onClick={handleSaveChanges}
+        className="bg-green-600 text-white px-6 py-2.5 rounded-full hover:bg-green-700 transition"
+      >
+        Save Changes
+      </button>
+      <button
+        onClick={handleDelete}
+        className="bg-red-600 text-white px-6 py-2.5 rounded-full hover:bg-red-700 transition"
+      >
+        Deactivate
+      </button>
+      <button
+        onClick={onClose}
+        className="bg-gray-400 text-white px-6 py-2.5 rounded-full hover:bg-gray-500 transition"
+      >
+        Close
+      </button>
     </div>
+  </div>
+
+  {/* Image Preview */}
+  {previewImage && (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
+      onClick={() => setPreviewImage(null)}
+    >
+      <img
+        src={previewImage}
+        alt="Preview"
+        className="max-w-[90%] max-h-[90%] rounded-lg shadow-lg"
+      />
+    </div>
+  )}
+</div>
+
   );
 };
 

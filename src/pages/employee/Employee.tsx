@@ -8,10 +8,15 @@ const EmployeesPage: React.FC = () => {
   const [department, setDepartment] = useState("");
   const [designation, setDesignation] = useState("");
   const [workLocation, setWorkLocation] = useState("");
+  
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [activeEmployees, setActiveEmployees] = useState<any[]>([]);
   const [inactiveEmployees, setInactiveEmployees] = useState<any[]>([]);
 
-  
+
+
+  console.log(activeEmployees);
+  console.log(inactiveEmployees);
 
   return (
     <div className="flex h-screen bg-gray-100 ">
@@ -24,28 +29,28 @@ const EmployeesPage: React.FC = () => {
             </div>
 
             <div className="mb-4">
-              <EmployeeFilters
-                department={department}
-                setDepartment={setDepartment}
-                designation={designation}
-                setDesignation={setDesignation}
-                workLocation={workLocation}
-                setWorkLocation={setWorkLocation}
-                activeEmployees={activeEmployees}
-                inactiveEmployees={inactiveEmployees}
-                setSearch={setSearch}
-              />
+             <EmployeeFilters
+  department={department}
+  setDepartment={setDepartment}
+  designation={designation}
+  setDesignation={setDesignation}
+  workLocation={workLocation}
+  setWorkLocation={setWorkLocation}
+  statusFilter={statusFilter}
+  setStatusFilter={setStatusFilter}
+/>
             </div>
 
             <div className="overflow-auto">
               <EmployeeTable
-                search={search}
-                department={department}
-                designation={designation}
-                workLocation={workLocation}
-                setActiveEmployees={setActiveEmployees}
-                setInactiveEmployees={setInactiveEmployees}
-              />
+  search={search}
+  department={department}
+  designation={designation}
+  workLocation={workLocation}
+  statusFilter={statusFilter}   // 👈 pass it here
+  setActiveEmployees={setActiveEmployees}
+  setInactiveEmployees={setInactiveEmployees}
+/>
             </div>
           </div>
         </main>
