@@ -34,6 +34,7 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
   >([]);
   const [workLocations, setWorkLocations] = useState<any[]>([]);
   console.log("workLocations>>>>>>>>>>>>", workLocations);
+    const [loading, setLoading] = useState(false); // ✅ loading state
 
   useEffect(() => {
     const fetchDesignations = async () => {
@@ -129,6 +130,7 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
       // Get session token
@@ -139,6 +141,7 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
 
       if (sessionError || !session?.access_token) {
         alert("Session not found. Please login again.");
+        setLoading(false); // ✅ stop loading
         return;
       }
       if (!formData.department_id) {
@@ -621,14 +624,45 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
         </div>
 
         {/* Submit */}
-        <div className="pt-4">
-          <button
-            type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition"
-          >
-            Add Employee
-          </button>
-        </div>
+           <div className="pt-4">
+        <button
+          type="submit"
+          disabled={loading} // ✅ disable when loading
+          className={`px-6 py-2 rounded-full transition flex items-center justify-center ${
+            loading
+              ? "bg-blue-400 text-white cursor-not-allowed"
+              : "bg-blue-600 text-white hover:bg-blue-700"
+          }`}
+        >
+          {loading ? (
+            <>
+              <svg
+                className="animate-spin h-5 w-5 mr-2 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                />
+              </svg>
+              Adding...
+            </>
+          ) : (
+            "Add Employee"
+          )}
+        </button>
+      </div>
       </div>
     </form>
   );

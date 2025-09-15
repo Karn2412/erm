@@ -7,6 +7,7 @@ interface Props {
   userId: string;
   month: string; // YYYY-MM
   onClose: () => void;
+  companyId?: string; // optional, for future use
 }
 
 interface PayRunDetail {
@@ -18,6 +19,7 @@ interface PayRunDetail {
   incentives: number;
   reimbursements: number;
   total_pay: number;
+
 }
 
 interface Adjustment {
@@ -34,6 +36,7 @@ const PayRunDetailsModal: React.FC<Props> = ({ userId, month, onClose }) => {
   const [form, setForm] = useState({ type: "INCENTIVE", amount: 0, note: "" });
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
 
   useEffect(() => {
     fetchDetails();

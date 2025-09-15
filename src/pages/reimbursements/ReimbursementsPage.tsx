@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from "react";
-
 import ReimbursementsFilters from "../../components/reimbursements/ReimbursementsFilters";
 import ReimbursementsTable from "../../components/reimbursements/ReimbursementsTable";
 import { supabase } from "../../supabaseClient";
@@ -8,65 +7,88 @@ interface Employee {
   id: string;
   name: string;
   number: string;
-  department_name?: string | null; // ✅ include department
+  department_name?: string | null;
+  designation?: string | null;
 }
 
 const ReimbursementsPage: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [search, setSearch] = useState("");
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
-const fetchEmployees = useCallback(async () => {
-  // Step 1: Get reimbursements (skip CANCELLED)
-  const { data: reimbursements, error: reimbErr } = await supabase
-    .from("reimbursements")
-    .select("user_id")
-    .neq("status", "CANCELLED");
+  // ✅ Get logged-in user & company
+  useEffect(() => {
+    const getCompany = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // 👇 assuming company_id is stored in users table
+        const { data: profile } = await supabase
+          .from("users")
+          .select("company_id")
+          .eq("id", user.id)
+          .single();
 
-  if (reimbErr) {
-    console.error("❌ reimbursements fetch", reimbErr);
-    return;
-  }
+        setCompanyId(profile?.company_id || null);
+      }
+    };
+    getCompany();
+  }, []);
 
-  const userIds = [...new Set((reimbursements || []).map((r) => r.user_id))];
-  if (userIds.length === 0) {
-    setEmployees([]);
-    return;
-  }
+  const fetchEmployees = useCallback(async () => {
+    if (!companyId) return;
 
-  // Step 2: Get users with department + designation join
-  const { data: users, error: userErr } = await supabase
-    .from("users")
-    .select(`
-      id,
-      name,
-      number,
-      departments ( department_name ),
-      designations ( designation )
-    `)
-    .in("id", userIds);
+    // Step 1: Get reimbursements for this company (skip CANCELLED)
+    const { data: reimbursements, error: reimbErr } = await supabase
+      .from("reimbursements")
+      .select("user_id")
+      .neq("status", "CANCELLED")
+      .eq("company_id", companyId); // ✅ filter by company
 
-  if (userErr) {
-    console.error("❌ users fetch", userErr);
-    return;
-  }
+    if (reimbErr) {
+      console.error("❌ reimbursements fetch", reimbErr);
+      return;
+    }
 
-  setEmployees(
-    (users || []).map((u: any) => ({
-      id: u.id,
-      name: u.name,
-      number: u.number,
-      department_name: u.departments?.department_name || null,
-      designation: u.designations?.designation || null,
-    }))
-  );
-}, []);
+    const userIds = [...new Set((reimbursements || []).map((r) => r.user_id))];
+    if (userIds.length === 0) {
+      setEmployees([]);
+      return;
+    }
 
+    // Step 2: Get users from this company with dept + designation
+    const { data: users, error: userErr } = await supabase
+      .from("users")
+      .select(`
+        id,
+        name,
+        number,
+        departments ( department_name ),
+        designations ( designation )
+      `)
+      .in("id", userIds)
+      .eq("company_id", companyId); // ✅ ensure users belong to same company
+
+    if (userErr) {
+      console.error("❌ users fetch", userErr);
+      return;
+    }
+
+    setEmployees(
+      (users || []).map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        number: u.number,
+        department_name: u.departments?.department_name || null,
+        designation: u.designations?.designation || null,
+      }))
+    );
+  }, [companyId]);
 
   useEffect(() => {
     fetchEmployees();
   }, [fetchEmployees]);
 
-  // 🔎 filter employees client-side
+  // 🔎 client-side search
   const filteredEmployees = employees.filter(
     (emp) =>
       emp.name.toLowerCase().includes(search.toLowerCase()) ||

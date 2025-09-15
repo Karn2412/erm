@@ -10,7 +10,7 @@ interface PayRun {
   employee_name: string;
   salary: number;
   deductions: number;
-  incentives: number; // ⚡ keep it in state, default = 0
+  incentives: number;
   reimbursements: number;
   total_pay: number;
   source: "Live" | "History";
@@ -20,9 +20,10 @@ interface Props {
   selectedMonth: string; // YYYY-MM
   payRange: string;
   search: string;
+  companyId?: string; // optional
 }
 
-const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
+const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search, companyId }) => {
   const [payRunsData, setPayRunsData] = useState<PayRun[]>([]);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -35,8 +36,8 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
       let formatted: PayRun[] = [];
 
       if (selectedMonth === currentMonth) {
-        // ✅ Live payroll
-        const { data: liveData, error: liveErr } = await supabase
+        // Live payroll
+        let query = supabase
           .from("monthly_payroll_view")
           .select(`
             user_id,
@@ -46,8 +47,13 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
             deductions,
             reimbursements,
             total_pay,
-            month
+            month,
+            company_id
           `);
+
+        if (companyId) query = query.eq("company_id", companyId);
+
+        const { data: liveData, error: liveErr } = await query;
 
         if (liveErr) {
           console.error("❌ Live payroll error:", liveErr);
@@ -60,14 +66,14 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
           employee_name: item.employee_name,
           salary: item.monthly_ctc,
           deductions: item.deductions || 0,
-          incentives: 0, // ⚡ not in view → default to 0
+          incentives: 0,
           reimbursements: item.reimbursements || 0,
           total_pay: item.total_pay,
           source: "Live" as const,
         }));
       } else {
-        // ✅ History payroll
-        const { data: historyData, error: histErr } = await supabase
+        // History payroll
+        let query = supabase
           .from("payroll_history_view")
           .select(`
             user_id,
@@ -77,9 +83,14 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
             base_pay,
             deductions,
             reimbursements,
-            total_pay
+            total_pay,
+            company_id
           `)
-          .eq("month", `${selectedMonth}-01`); // ✅ FIXED: match full date
+          .eq("month", `${selectedMonth}-01`);
+
+        if (companyId) query = query.eq("company_id", companyId);
+
+        const { data: historyData, error: histErr } = await query;
 
         if (histErr) {
           console.error("❌ History payroll error:", histErr);
@@ -92,47 +103,38 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
           employee_name: item.employee_name,
           salary: item.monthly_ctc,
           deductions: item.deductions || 0,
-          incentives: 0, // ⚡ default
+          incentives: 0,
           reimbursements: item.reimbursements || 0,
           total_pay: item.total_pay,
           source: "History" as const,
         }));
       }
 
-      // 🔎 Apply filters
+      // filters
       let results = formatted;
-
       if (search) {
-        results = results.filter((p) =>
-          p.employee_name.toLowerCase().includes(search.toLowerCase())
-        );
+        results = results.filter((p) => p.employee_name.toLowerCase().includes(search.toLowerCase()));
       }
 
       if (payRange === "0 - 1 Lakh") {
         results = results.filter((p) => p.total_pay < 100000);
       } else if (payRange === "1 Lakh - 2 Lakh") {
-        results = results.filter(
-          (p) => p.total_pay >= 100000 && p.total_pay < 200000
-        );
+        results = results.filter((p) => p.total_pay >= 100000 && p.total_pay < 200000);
       }
 
       setPayRunsData(results);
     };
 
-    // 🔎 Check if payroll already approved in history
     const checkApproval = async () => {
-      const { data } = await supabase
-        .from("payroll_history_view")
-        .select("user_id")
-        .eq("month", `${selectedMonth}-01`) // ✅ FIX
-        .limit(1);
-
+      let query = supabase.from("payroll_history_view").select("user_id").eq("month", `${selectedMonth}-01`).limit(1);
+      if (companyId) query = query.eq("company_id", companyId);
+      const { data } = await query;
       setAlreadyApproved((data?.length ?? 0) > 0);
     };
 
     fetchPayRuns();
     checkApproval();
-  }, [selectedMonth, payRange, search]);
+  }, [selectedMonth, payRange, search, companyId]);
 
   const handleViewMore = (userId: string) => {
     setSelectedUser(userId);
@@ -141,9 +143,11 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
 
   const handleApprovePayroll = async () => {
     try {
-      const { error } = await supabase.rpc("close_month_payroll", {
-        p_month: selectedMonth, // ⚡ YYYY-MM
-      });
+      // If your RPC accepts company_id, pass it as p_company_id
+      const rpcArgs: any = { p_month: selectedMonth };
+      if (companyId) rpcArgs.p_company_id = companyId;
+
+      const { error } = await supabase.rpc("close_month_payroll", rpcArgs);
 
       if (error) {
         console.error("❌ Approve payroll error:", error);
@@ -158,22 +162,16 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
     }
   };
 
-  // ✅ Last day of current month check
+  // Last day check
   const today = new Date();
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  const isLastDay =
-    today.toDateString() === lastDay.toDateString() &&
-    selectedMonth === today.toISOString().slice(0, 7);
+  const isLastDay = today.toDateString() === lastDay.toDateString() && selectedMonth === today.toISOString().slice(0, 7);
 
   return (
     <>
-      {/* ✅ Approve button block */}
       {isLastDay && !alreadyApproved && (
         <div className="flex justify-end mb-3">
-          <button
-            onClick={handleApprovePayroll}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
+          <button onClick={handleApprovePayroll} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
             Approve Monthly Payroll
           </button>
         </div>
@@ -183,58 +181,28 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
         <table className="min-w-full text-sm text-gray-700 border-separate border-spacing-y-2">
           <thead>
             <tr className="bg-gray-50">
-              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">
-                SL No
-              </th>
-              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">
-                Employee Name
-              </th>
-              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">
-                Salary
-              </th>
-              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">
-                Deductions
-              </th>
-              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">
-                Incentives
-              </th>
-              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">
-                Reimbursements
-              </th>
-              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">
-                Total Pay
-              </th>
-              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">
-                View More
-              </th>
+              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">SL No</th>
+              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">Employee Name</th>
+              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">Salary</th>
+              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">Deductions</th>
+              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">Incentives</th>
+              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">Reimbursements</th>
+              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">Total Pay</th>
+              <th className="py-3 px-4 text-left text-gray-600 uppercase text-xs">View More</th>
             </tr>
           </thead>
-
           <tbody>
             {payRunsData.map((item, index) => (
-              <tr
-                key={`${item.user_id}-${selectedMonth}`}
-                className="odd:bg-blue-50 even:bg-gray-50 hover:bg-gray-100 transition"
-              >
+              <tr key={`${item.user_id}-${selectedMonth}`} className="odd:bg-blue-50 even:bg-gray-50 hover:bg-gray-100 transition">
                 <td className="py-3 px-4 rounded-l-lg">{index + 1}</td>
-                <td className="py-3 px-4 font-medium text-gray-800">
-                  {item.employee_name}
-                </td>
+                <td className="py-3 px-4 font-medium text-gray-800">{item.employee_name}</td>
                 <td className="py-3 px-4">{item.salary}</td>
                 <td className="py-3 px-4">{item.deductions}</td>
                 <td className="py-3 px-4">{item.incentives}</td>
                 <td className="py-3 px-4">{item.reimbursements}</td>
                 <td className="py-3 px-4 font-semibold">{item.total_pay}</td>
                 <td className="py-3 px-4 rounded-r-lg">
-                  <button
-                    onClick={() => handleViewMore(item.user_id)}
-                    className={`text-gray-600 hover:text-gray-900 ${
-                      item.source === "History"
-                        ? "opacity-50 cursor-not-allowed"
-                        : ""
-                    }`}
-                    disabled={item.source === "History"}
-                  >
+                  <button onClick={() => handleViewMore(item.user_id)} className={`text-gray-600 hover:text-gray-900 ${item.source === "History" ? "opacity-50 cursor-not-allowed" : ""}`} disabled={item.source === "History"}>
                     <FaEye />
                   </button>
                 </td>
@@ -245,11 +213,7 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search }) => {
       </div>
 
       {showModal && selectedUser && (
-        <PayRunDetailsModal
-          userId={selectedUser}
-          month={selectedMonth}
-          onClose={() => setShowModal(false)}
-        />
+        <PayRunDetailsModal userId={selectedUser} month={selectedMonth} companyId={companyId} onClose={() => setShowModal(false)} />
       )}
     </>
   );

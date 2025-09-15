@@ -104,6 +104,33 @@ if (locationData.company_id !== adminCompanyId) {
 }
 
 
+// ✅ Count current active users in the company
+const { data: activeUsersData, error: activeUsersError } = await supabase
+  .from("users")
+  .select("id")
+  .eq("company_id", adminCompanyId)
+  .eq("is_active", true);
+
+if (activeUsersError) {
+  return withCors(new Response(JSON.stringify({ error: "Failed to fetch active users", details: activeUsersError.message }), { status: 500 }));
+}
+
+// ✅ Fetch company's max_active_members
+const { data: companyData, error: companyError } = await supabase
+  .from("companies")
+  .select("max_active_members")
+  .eq("id", adminCompanyId)
+  .single();
+
+if (companyError || !companyData) {
+  return withCors(new Response(JSON.stringify({ error: "Failed to fetch company data", details: companyError?.message }), { status: 500 }));
+}
+
+// ✅ Check if adding a new user exceeds max limit
+if (activeUsersData.length >= companyData.max_active_members) {
+  return withCors(new Response(JSON.stringify({ error: `Cannot add more users. Maximum active users limit (${companyData.max_active_members}) reached.` }), { status: 403 }));
+}
+
     // ✅ Create Auth User
     const { data: userData, error: userError } = await supabase.auth.admin.createUser({
       email,
