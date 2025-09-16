@@ -10,6 +10,7 @@ import PaymentInformationForm from "../../components/adminEmployee/addemployee/P
 const AddEmployeePage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [dateOfJoining, setDateOfJoining] = useState<string>("");
   const navigate = useNavigate();
 
   const [employeeData, setEmployeeData] = useState({
@@ -23,8 +24,9 @@ const AddEmployeePage: React.FC = () => {
     }
   };
 
-  const handleEmployeeCreated = (userId: string, companyId: string) => {
+  const handleEmployeeCreated = (userId: string, companyId: string, doj: string) => {
     setEmployeeData({ userId, companyId });
+    setDateOfJoining(doj); // ✅ store DOJ in parent
     markStepComplete(1);
     setCurrentStep(2);
   };
@@ -32,16 +34,19 @@ const AddEmployeePage: React.FC = () => {
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <AddEmployeeForm onEmployeeCreated={handleEmployeeCreated} />;
+        return <AddEmployeeForm onEmployeeCreated={handleEmployeeCreated} 
+        />;
 
       case 2:
         return (
           <SalaryDetails
             userId={employeeData.userId}
             companyId={employeeData.companyId}
+            dateOfJoining={dateOfJoining}
             onComplete={() => {
               markStepComplete(2);
               setCurrentStep(3);
+              setDateOfJoining(dateOfJoining); // ✅ ensure DOJ is set
             }}
           />
         );

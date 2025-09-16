@@ -5,11 +5,11 @@ import { supabase } from "../../../supabaseClient";
 interface SalaryDetailsFormProps {
   userId: string;      // Pass from parent (employee's user_id)
   companyId: string;   // Pass from parent (current company_id)
-   onComplete: () => void
+  dateOfJoining: string; // ✅ new prop
+  onComplete: () => void
 }
 
-const SalaryDetailsForm: React.FC<SalaryDetailsFormProps> = ({ userId, companyId , onComplete }) => {
-  const [dateOfJoining, setDateOfJoining] = useState("");
+const SalaryDetailsForm: React.FC<SalaryDetailsFormProps> = ({ userId, companyId, dateOfJoining, onComplete }) => {
   const [monthlyCTC, setMonthlyCTC] = useState<number | "">("");
   const [pfCovered, setPfCovered] = useState(true);
   const [esiCovered, setEsiCovered] = useState(true);
@@ -85,8 +85,8 @@ const SalaryDetailsForm: React.FC<SalaryDetailsFormProps> = ({ userId, companyId
           </label>
           <input
             type="date"
-            value={dateOfJoining}
-            onChange={(e) => setDateOfJoining(e.target.value)}
+  value={dateOfJoining}
+  disabled //
             className="w-full px-3 py-2 border border-blue-300 rounded-full focus:ring-2 focus:ring-indigo-500"
           />
         </div>

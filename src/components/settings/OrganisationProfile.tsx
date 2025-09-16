@@ -203,43 +203,59 @@ const OrganisationProfile: React.FC = () => {
       <div>
         <label className="font-medium text-sm">Organisation Logo</label>
         <div className="mt-2 flex items-center space-x-4">
-          {logo ? (
-            // Show preview if a new file is selected
-            <div className="border rounded-lg p-2 flex flex-col items-center">
-              <img
-                src={URL.createObjectURL(logo)}
-                alt="preview"
-                className="w-24 h-24 object-contain mb-2"
-              />
-              <button
-                type="button"
-                className="text-xs text-red-500"
-                onClick={() => setLogo(null)}
-              >
-                Remove logo
-              </button>
-            </div>
-          ) : logoUrl ? (
-            // Show saved logo if exists
-            <div className="border rounded-lg p-2 flex flex-col items-center">
-              <img
-                src={logoUrl}
-                alt="logo"
-                className="w-24 h-24 object-contain mb-2"
-              />
-              <button
-                type="button"
-                className="text-xs text-red-500"
-                onClick={() => setLogoUrl(null)}
-              >
-                Remove logo
-              </button>
-            </div>
-          ) : (
-            // If no logo yet
-            <input type="file" accept="image/*" onChange={handleLogoChange} />
-          )}
-        </div>
+  {logo ? (
+    // Show preview if a new file is selected
+    <div className="border rounded-lg p-2 flex flex-col items-center">
+      <img
+        src={URL.createObjectURL(logo)}
+        alt="preview"
+        className="w-24 h-24 object-contain mb-2"
+      />
+      <button
+        type="button"
+        className="text-xs text-red-500"
+        onClick={() => setLogo(null)}
+      >
+        Remove logo
+      </button>
+    </div>
+  ) : logoUrl ? (
+    // Show saved logo if exists
+    <div className="border rounded-lg p-2 flex flex-col items-center">
+      <img
+        src={logoUrl}
+        alt="logo"
+        className="w-24 h-24 object-contain mb-2"
+      />
+      <button
+        type="button"
+        className="text-xs text-red-500"
+        onClick={() => setLogoUrl(null)}
+      >
+        Remove logo
+      </button>
+    </div>
+  ) : (
+    // Custom file input button
+    <div className="flex items-center space-x-2">
+      <label
+        htmlFor="logo-upload"
+        className="cursor-pointer bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
+      >
+        Choose File
+      </label>
+      <input
+        id="logo-upload"
+        type="file"
+        accept="image/*"
+        onChange={handleLogoChange}
+        className="hidden"
+      />
+      
+    </div>
+  )}
+</div>
+
         <p className="text-xs text-gray-500 mt-1">
           This logo will be displayed on documents such as Payslip and TDS Worksheet. <br />
           Preferred Image Size: 240 × 240px @ 72 DPI, Maximum size 1MB. <br />

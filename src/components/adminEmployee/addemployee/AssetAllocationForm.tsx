@@ -53,37 +53,61 @@ const AssetAllocationForm: React.FC<Props> = ({ userId, companyId, onComplete })
     );
   };
 
-  const handleSubmit = async () => {
-    if (selectedAssets.length === 0) {
-      alert("⚠️ Please select at least one asset to allocate");
-      return;
-    }
+ const handleSubmit = async () => {
+  if (selectedAssets.length === 0 && !uniqueAssets) {
+    // ✅ No assets chosen → just move to next step
+    alert("ℹ️ No assets allocated. Proceeding...");
+    onComplete();
+    return;
+  }
 
-    // Insert one row per selected asset
-    const rows = selectedAssets.map((assetId) => ({
-      user_id: userId,
-      asset_id: assetId,
-      company_id: companyId,
-      unique_assets: uniqueAssets || null,
-    }));
+  // Insert one row per selected asset (if any)
+  const rows = selectedAssets.map((assetId) => ({
+    user_id: userId,
+    asset_id: assetId,
+    company_id: companyId,
+    unique_assets: uniqueAssets || null,
+  }));
 
+  if (rows.length > 0) {
     const { error } = await supabase.from("asset_allocations").insert(rows);
 
     if (error) {
       alert("❌ Allocation failed: " + error.message);
-    } else {
-      // ✅ Update asset status to 'allocated'
-      await supabase
-        .from("assets")
-        .update({ status: "allocated" })
-        .in("id", selectedAssets);
-
-      alert("✅ Assets allocated successfully");
-      setSelectedAssets([]);
-      setUniqueAssets("");
-      onComplete();
+      return;
     }
-  };
+
+    // ✅ Update asset status to 'allocated'
+    await supabase
+      .from("assets")
+      .update({ status: "allocated" })
+      .in("id", selectedAssets);
+
+    alert("✅ Assets allocated successfully");
+  } else if (uniqueAssets) {
+    // ✅ Only unique asset provided
+    const { error } = await supabase.from("asset_allocations").insert([
+      {
+        user_id: userId,
+        company_id: companyId,
+        asset_id: "00000000-0000-0000-0000-000000000000", // optional dummy/null if required
+        unique_assets: uniqueAssets,
+      },
+    ]);
+
+    if (error) {
+      alert("❌ Allocation failed: " + error.message);
+      return;
+    }
+
+    alert("✅ Unique asset recorded successfully");
+  }
+
+  setSelectedAssets([]);
+  setUniqueAssets("");
+  onComplete();
+};
+
 
   if (loading) return <p>Loading assets...</p>;
 

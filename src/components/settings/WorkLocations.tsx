@@ -49,12 +49,20 @@ const WorkLocations: React.FC = () => {
   }
 
   try {
-    const { data, error } = await supabase
-      .from("work_locations")
-      .select(
-        "id,name,address,city,state,pincode,is_filing_address,company_id"
-      )
-      .eq("company_id", userData.company_id); // Must be a valid UUID
+   const { data, error } = await supabase
+  .from("work_locations")
+  .select(`
+    id,
+    name,
+    address,
+    city,
+    state,
+    pincode,
+    is_filing_address,
+    company_id,
+    employees:users(count)
+  `)
+  .eq("company_id", userData.company_id);
 
     if (error) throw error;
     setLocations(data || []);
@@ -189,7 +197,7 @@ const getStateName = (stateId: string) => states.find((s) => s.id === stateId)?.
   </p>
 
   <p className="text-sm text-gray-500 mt-1 flex items-center">
-    <FaUsers className="mr-1" /> {loc.employee_count || 0} Employees
+    <FaUsers className="mr-1" /> {loc.employees?.[0]?.count || 0} Employees
   </p>
 
   {/* Filing Address badge */}
