@@ -19,7 +19,7 @@ const Header = () => {
   const hideSearchBarRoutes = ["/employees"];
   const shouldHideSearchBar = hideSearchBarRoutes.includes(location.pathname);
 
-  // ✅ Fetch avatar directly here
+  // ✅ Fetch avatar
   useEffect(() => {
     const fetchAvatar = async () => {
       if (!userData?.auth_id) return;
@@ -30,15 +30,12 @@ const Header = () => {
         .eq("auth_id", userData.auth_id)
         .single();
 
-      if (!error && data) {
-        setAvatarUrl(data.gender_avatar);
-      }
+      if (!error && data) setAvatarUrl(data.gender_avatar);
     };
-
     fetchAvatar();
   }, [userData?.auth_id]);
 
-  // Logout
+  // ✅ Logout
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (!error) {
@@ -47,7 +44,7 @@ const Header = () => {
     }
   };
 
-  // Close dropdown on outside click
+  // ✅ Dropdown outside click
   useEffect(() => {
     const handleClickOutside = (event: any) => {
       if (dropdownRef.current && !(dropdownRef.current as any).contains(event.target)) {
@@ -58,98 +55,96 @@ const Header = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // ✅ Fetch requests function
+  const fetchRequests = async () => {
+    if (!userData?.company_id) return;
+    try {
+      let data: any[] = [];
 
+      if (userData?.role?.toLowerCase() === "admin") {
+        const { data: attendanceData } = await supabase
+          .from("attendance_requests")
+          .select("id,user_id,request_type,status,reason,created_at")
+          .eq("company_id", userData.company_id)
+          .eq("status", "PENDING")
+          .order("created_at", { ascending: false });
 
-  useEffect(() => {
-    const handleClickOutside = (event: any) => {
-      if (dropdownRef.current && !(dropdownRef.current as any).contains(event.target)) {
-        setDropdownOpen(false);
+        const { data: reimbursementData } = await supabase
+          .from("reimbursements")
+          .select("id,user_id,category,status,description,expense_date,company_id")
+          .eq("company_id", userData.company_id)
+          .eq("status", "PENDING")
+          .order("expense_date", { ascending: false });
+
+        data = [
+          ...(attendanceData ?? []).map((r: any) => ({
+            ...r,
+            request_source: "ATTENDANCE",
+            detail: r.reason || "No details",
+          })),
+          ...(reimbursementData ?? []).map((r: any) => ({
+            ...r,
+            request_source: "REIMBURSEMENT",
+            request_type: r.category,
+            created_at: r.expense_date,
+            detail: r.description || "No details",
+          })),
+        ];
+      } else {
+        const { data: staffData } = await supabase
+          .from("attendance_requests")
+          .select("id,request_type,status,reason,created_at")
+          .eq("user_id", userData?.id)
+          .in("status", ["APPROVED", "REJECTED"])
+          .order("created_at", { ascending: false });
+
+        data = staffData ?? [];
       }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
-  // Fetch requests
+      const normalized = (data || []).map((r: any) => ({
+        id: r.id,
+        type: r.request_type,
+        status: r.status,
+        created_at: r.created_at,
+        detail: r.detail || r.reason || r.description || "No details",
+        requestedBy: userData?.role?.toLowerCase() === "admin" ? r.user_id : userData?.name,
+        navigateTo:
+          r.request_source === "REIMBURSEMENT"
+            ? `/reimbursements/${r.user_id}`
+            : `/attendance-detail/${r.user_id}`,
+      }));
+
+      setRequests(normalized);
+    } catch (err) {
+      console.error("Error fetching requests:", err);
+    }
+  };
+
+  // ✅ Fetch + realtime subscription
   useEffect(() => {
+    fetchRequests();
     if (!userData?.company_id) return;
 
-    const fetchRequests = async () => {
-      try {
-        let data: any[] = [];
+    const channel = supabase
+      .channel("header-updates")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "attendance_requests" },
+        () => fetchRequests()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reimbursements" },
+        () => fetchRequests()
+      )
+      .subscribe();
 
-        if (userData?.role?.toLowerCase() === "admin") {
-          // ✅ Attendance requests
-          const { data: attendanceData, error: attErr } = await supabase
-            .from("attendance_requests")
-            .select("id,user_id,request_type,status,reason,created_at")
-            .eq("company_id", userData.company_id)
-            .eq("status", "PENDING")
-            .order("created_at", { ascending: false });
-
-          if (attErr) console.error("Attendance fetch error", attErr);
-
-          // ✅ Reimbursements
-          const { data: reimbursementData, error: reimbErr } = await supabase
-            .from("reimbursements")
-            .select("id,user_id,category,status,description,expense_date,company_id")
-            .eq("company_id", userData.company_id)
-            .eq("status", "PENDING")
-            .order("expense_date", { ascending: false });
-
-          if (reimbErr) console.error("Reimbursement fetch error", reimbErr);
-
-          // Merge + normalize
-          data = [
-            ...(attendanceData ?? []).map((r: any) => ({
-              ...r,
-              request_source: "ATTENDANCE",
-              detail: r.reason || "No details",
-            })),
-            ...(reimbursementData ?? []).map((r: any) => ({
-              ...r,
-              request_source: "REIMBURSEMENT",
-              request_type: r.category,
-              created_at: r.expense_date,
-              detail: r.description || "No details",
-            })),
-          ];
-        } else {
-          // ✅ Staff (self view)
-          const { data: staffData, error: staffErr } = await supabase
-            .from("attendance_requests")
-            .select("id,request_type,status,reason,created_at")
-            .eq("user_id", userData?.id)
-            .in("status", ["APPROVED", "REJECTED"])
-            .order("created_at", { ascending: false });
-
-          if (staffErr) console.error("Staff fetch error", staffErr);
-
-          data = staffData ?? [];
-        }
-
-        // ✅ Normalize for UI
-        const normalized = (data || []).map((r: any) => ({
-          id: r.id,
-          type: r.request_type,
-          status: r.status,
-          created_at: r.created_at,
-          detail: r.detail || r.reason || r.description || "No details",
-          requestedBy: userData?.role?.toLowerCase() === "admin" ? r.user_id : userData?.name,
-          navigateTo:
-            r.request_source === "REIMBURSEMENT"
-              ? `/reimbursements/${r.user_id}`
-              : `/attendance-detail/${r.user_id}`,
-        }));
-
-        setRequests(normalized);
-      } catch (err) {
-        console.error("Error fetching requests:", err);
-      }
+    return () => {
+      supabase.removeChannel(channel);
     };
-
-    fetchRequests();
   }, [userData?.company_id, userData?.id, userData?.role]);
+
+  
 
   return (
     <div className="flex justify-between items-center bg-[#f8f8f8] px-6 py-3 ">

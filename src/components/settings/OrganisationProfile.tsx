@@ -3,6 +3,12 @@ import React, { useState, useEffect, useContext } from "react";
 import { supabase } from "../../supabaseClient";
 import { UserContext } from "../../context/UserContext";
 
+// redux imports
+
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "../../redux/store";
+import { setCompany } from "../../redux/companySlice";
+
 interface Location {
   id: string;
   name: string;
@@ -16,6 +22,9 @@ interface Location {
 }
 
 const OrganisationProfile: React.FC = () => {
+
+  const dispatch = useDispatch<AppDispatch>();
+
   const [orgName, setOrgName] = useState("");
   const [logo, setLogo] = useState<File | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -190,6 +199,11 @@ const OrganisationProfile: React.FC = () => {
     } else {
       alert("Saved successfully!");
       setLogoUrl(uploadedLogoUrl || logoUrl);
+      dispatch(setCompany({
+        id: companyId,
+        name: orgName,
+        logo_url: uploadedLogoUrl || logoUrl,
+      }));
     }
 
     setLoading(false);

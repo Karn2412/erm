@@ -13,6 +13,9 @@ import { MdDashboard } from "react-icons/md";
 import { useUser } from "../../context/UserContext";
 import { supabase } from "../../supabaseClient";
 
+// redux imports
+import { useAppSelector } from "../../redux/store";
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -37,77 +40,58 @@ const staffMenuItems = [
   { name: "Reimbursements", icon: <FaRegFileAlt />, path: "/staff/reimbursements" },
 ];
 
+// ... keep your imports
+
 const UnifiedSidebar: React.FC<Props> = ({ isOpen, onClose, role }) => {
   const location = useLocation();
   const { userData } = useUser();
+  const companyData = useAppSelector((state) => state.company);
+  console.log("Company data from Redux:", companyData);
+  
   const menuItems = role === "admin" ? adminMenuItems : staffMenuItems;
 
-  // 👇 company info
   const [company, setCompany] = useState<{ name: string; logo_url?: string } | null>(null);
-
-  // 👇 counts
   const [attendanceCount, setAttendanceCount] = useState(0);
   const [reimbursementCount, setReimbursementCount] = useState(0);
 
-  // Fetch company
-  useEffect(() => {
-    const fetchCompany = async () => {
-      if (!userData?.company_id) return;
-      const { data } = await supabase
-        .from("companies")
-        .select("name, logo_url")
-        .eq("id", userData.company_id)
-        .single();
-      if (data) setCompany(data);
-    };
-    fetchCompany();
-  }, [userData?.company_id]);
+useEffect(() => {
+  if (companyData.id) {
+    setCompany({
+      name: companyData.name,
+      logo_url: companyData.logo_url || undefined,
+    });
+  }
+}, [companyData]);
 
-  // Fetch request counts
-// Fetch request counts initially + subscribe for realtime updates
+// Fetch company + listen for realtime updates
 useEffect(() => {
   if (!userData?.company_id) return;
 
-  const fetchRequests = async () => {
-    try {
-      if (userData?.role?.toLowerCase() === "admin") {
-        const { count: attCount } = await supabase
-          .from("attendance_requests")
-          .select("*", { count: "exact", head: true })
-          .eq("company_id", userData.company_id)
-          .eq("status", "PENDING");
-
-        const { count: reimbCount } = await supabase
-          .from("reimbursements")
-          .select("*", { count: "exact", head: true })
-          .eq("company_id", userData.company_id)
-          .eq("status", "PENDING");
-
-        setAttendanceCount(attCount || 0);
-        setReimbursementCount(reimbCount || 0);
-      }
-    } catch (err) {
-      console.error("Error fetching requests count:", err);
-    }
+  const fetchCompany = async () => {
+    const { data } = await supabase
+      .from("companies")
+      .select("name, logo_url")
+      .eq("id", userData.company_id)
+      .single();
+    if (data) setCompany(data);
   };
 
-  fetchRequests();
+  fetchCompany();
 
-  // --- ✅ Listen for real-time changes ---
+  // ✅ Subscribe to changes on this company's row
   const channel = supabase
-    .channel("sidebar-updates")
+    .channel("company-updates")
     .on(
       "postgres_changes",
-      { event: "*", schema: "public", table: "attendance_requests" },
-      () => {
-        fetchRequests(); // refresh counts on any change
-      }
-    )
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "reimbursements" },
-      () => {
-        fetchRequests(); // refresh counts on any change
+      {
+        event: "*",            // INSERT | UPDATE | DELETE
+        schema: "public",
+        table: "companies",
+        filter: `id=eq.${userData.company_id}`,
+      },
+      (payload) => {
+        console.log("Company updated:", payload);
+        fetchCompany(); // re-fetch latest logo + name
       }
     )
     .subscribe();
@@ -115,8 +99,57 @@ useEffect(() => {
   return () => {
     supabase.removeChannel(channel);
   };
-}, [userData?.company_id, userData?.role]);
+}, [userData?.company_id]);
 
+
+  // ✅ Fetch request counts
+  useEffect(() => {
+    if (!userData?.company_id) return;
+
+    const fetchRequests = async () => {
+      try {
+        if (userData?.role?.toLowerCase() === "admin") {
+          const { count: attCount } = await supabase
+            .from("attendance_requests")
+            .select("*", { count: "exact", head: true })
+            .eq("company_id", userData.company_id)
+            .eq("status", "PENDING");
+
+          const { count: reimbCount } = await supabase
+            .from("reimbursements")
+            .select("*", { count: "exact", head: true })
+            .eq("company_id", userData.company_id)
+            .eq("status", "PENDING");
+
+          setAttendanceCount(attCount || 0);
+          setReimbursementCount(reimbCount || 0);
+        }
+      } catch (err) {
+        console.error("Error fetching requests count:", err);
+      }
+    };
+
+    fetchRequests();
+
+    // ✅ Listen for changes to requests
+    const channel = supabase
+      .channel("sidebar-requests")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "attendance_requests" },
+        () => fetchRequests()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reimbursements" },
+        () => fetchRequests()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userData?.company_id, userData?.role]);
 
   return (
     <>
@@ -152,7 +185,6 @@ useEffect(() => {
               location.pathname === item.path ||
               location.pathname.startsWith(item.path);
 
-            // attach badge counts for specific items
             const badgeCount =
               item.name === "Attendance and Leave"
                 ? attendanceCount
@@ -189,5 +221,4 @@ useEffect(() => {
     </>
   );
 };
-
 export default UnifiedSidebar;
