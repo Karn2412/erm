@@ -1,24 +1,33 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../supabaseClient";
 import DesignationModal from "./modal/DesignationModal";
+import { useUser } from "../../context/UserContext";
 
 
 interface Designation {
   id: string;
   designation: string;
   created_at: string;
+  company_id: string;
 }
 
 const DesignationsTable: React.FC = () => {
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [openModal, setOpenModal] = useState(false);
+  const { userData } = useUser(); // 👈 contains company_id
+  console.log(userData);
 
-  // Fetch all designations
+  // Fetch company-specific designations
   const fetchDesignations = async () => {
+    if (!userData?.company_id) return;
+
     const { data, error } = await supabase
       .from("designations")
       .select("*")
+      .eq("company_id", userData.company_id) // 👈 filter by company
       .order("created_at", { ascending: true });
+      console.log(data);
+      
 
     if (error) {
       console.error("Error fetching designations:", error);
@@ -29,7 +38,7 @@ const DesignationsTable: React.FC = () => {
 
   useEffect(() => {
     fetchDesignations();
-  }, []);
+  }, [userData?.company_id]); // 👈 re-fetch if company changes
 
   return (
     <div className="bg-white shadow rounded-lg p-6">
@@ -50,11 +59,19 @@ const DesignationsTable: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {designations.map((d) => (
-            <tr key={d.id} className="">
-              <td className="p-2 text-blue-600">{d.designation}</td>
+          {designations.length > 0 ? (
+            designations.map((d) => (
+              <tr key={d.id}>
+                <td className="p-2 text-blue-600">{d.designation}</td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td className="p-2 text-gray-500 italic">
+                No designations found for this company
+              </td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
 

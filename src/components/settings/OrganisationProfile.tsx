@@ -8,7 +8,7 @@ interface Location {
   name: string;
   address: string;
   city: string;
-  state: string;
+  state: { id: string; name: string };
   pincode: string;
   employee_count?: number;
   is_filing_address: boolean;
@@ -91,12 +91,29 @@ const OrganisationProfile: React.FC = () => {
       }
 
       // 2. Fetch all work locations for dropdown
-      const { data: locs, error: locErr } = await supabase
-        .from("work_locations")
-        .select("*")
-        .eq("company_id", userData.company_id);
-
-      if (locs && !locErr) setLocations(locs);
+     const { data: locs, error: locErr } = await supabase
+  .from("work_locations")
+  .select(`
+    id,
+    name,
+    address,
+    city,
+    pincode,
+    is_filing_address,
+    state:states (
+      id,
+      name
+    )
+  `)
+  .eq("company_id", userData.company_id);
+      console.log("Locations:", locs, "Error:", locErr);
+      if (locs && !locErr) {
+  const transformedLocs = locs.map(loc => ({
+    ...loc,
+    state: loc.state?.[0] || { id: '', name: '' }
+  }));
+  setLocations(transformedLocs);
+}
 
       setLoading(false);
     };
@@ -109,7 +126,8 @@ const OrganisationProfile: React.FC = () => {
     if (!companyLocationId) return;
     const loc = locations.find((l) => l.id === companyLocationId);
     if (loc) {
-      setAddress(`${loc.address}, ${loc.city}, ${loc.state}, ${loc.pincode}`);
+      setAddress(`${loc.address}, ${loc.city}, ${loc.state?.name}, ${loc.pincode}`);
+
     }
   }, [companyLocationId, locations]);
 
@@ -304,8 +322,9 @@ const OrganisationProfile: React.FC = () => {
           <option value="">Select a work location</option>
           {locations.map((loc) => (
             <option key={loc.id} value={loc.id}>
-              {loc.name} – {loc.city}, {loc.state}
-            </option>
+  {loc.name} – {loc.city}, {loc.state?.name}
+</option>
+
           ))}
         </select>
       </div>
@@ -320,9 +339,9 @@ const OrganisationProfile: React.FC = () => {
       </div>
 
       {/* Contact Info */}
-      const [isEditingContact, setIsEditingContact] = useState(false);
+      
 
-// Contact Info Section
+
 <div>
   <h3 className="font-semibold flex items-center justify-between">
     Contact Info

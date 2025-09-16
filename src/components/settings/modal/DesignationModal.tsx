@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { supabase } from "../../../supabaseClient";
+import { useUser } from "../../../context/UserContext";
 
 
 interface Props {
@@ -9,13 +10,15 @@ interface Props {
 
 const DesignationModal: React.FC<Props> = ({ onClose, onSaved }) => {
   const [designation, setDesignation] = useState("");
-
+  const { userData } = useUser();
   const handleSave = async () => {
     if (!designation.trim()) return;
 
     const { error } = await supabase
       .from("designations")
-      .insert([{ designation }]);
+      .insert([{ designation,
+        company_id: userData.company_id, // 👈 ensure company is linked
+       }]);
 
     if (error) {
       console.error("Insert failed:", error);

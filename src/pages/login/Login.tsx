@@ -15,77 +15,86 @@ const LoginPage: React.FC = () => {
   const { setUserData } = useUser();
 
   const handleLogin = async () => {
-    setError("");
-    setLoading(true);
+  setError("");
+  setLoading(true);
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  const { data, error: authError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
-    if (authError) {
-      setError(authError.message);
-      setLoading(false);
-      return;
-    }
-
-    const userId = data.user.id;
-
-    const { data: userRecord, error: userError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", userId)
-      .single();
-
-    if (userError || !userRecord) {
-      setError("You are not registered as a user.");
-      setLoading(false);
-      return;
-    }
-
-    const { data: roleData, error: roleError } = await supabase
-      .from("user_roles")
-      .select("id, company_id, roles(role)")
-      .eq("id", userId)
-      .single();
-
-    if (roleError || !roleData) {
-      setError("Role not assigned. Contact admin.");
-      setLoading(false);
-      return;
-    }
-
-    interface RoleType {
-      role: string;
-    }
-    const rolesData = roleData.roles as RoleType | RoleType[];
-    const actualRole = Array.isArray(rolesData) ? rolesData[0]?.role : rolesData?.role;
-
-    if (roleType === "admin" && actualRole !== "admin") {
-      setError("You are not an Admin.");
-      setLoading(false);
-      return;
-    }
-    if (roleType === "staff" && actualRole === "admin") {
-      setError("You cannot log in as Staff.");
-      setLoading(false);
-      return;
-    }
-
-    setUserData({
-      ...userRecord,
-      role: actualRole,
-      company_id: roleData.company_id,
-    });
-
+  if (authError) {
+    setError(authError.message);
     setLoading(false);
+    return;
+  }
 
-    if (roleType === "admin") {
-      navigate("/dashboard");
-    } else {
-      navigate("/staff/dashboard");
-    }
-  };
+  const userId = data.user.id;
+
+  // ✅ Fetch user row (includes company_id)
+  const { data: userRecord, error: userError } = await supabase
+    .from("users")
+    .select("id, company_id, name, designation_id, department_id")
+    .eq("id", userId)
+    .single();
+
+  if (userError || !userRecord) {
+    setError("You are not registered as a user.");
+    setLoading(false);
+    return;
+  }
+
+  // ✅ Fetch role
+  const { data: roleData, error: roleError } = await supabase
+    .from("user_roles")
+    .select("roles(role)")
+    .eq("id", userId)
+    .single();
+
+  if (roleError || !roleData) {
+    setError("Role not assigned. Contact admin.");
+    setLoading(false);
+    return;
+  }
+
+  interface RoleType {
+    role: string;
+  }
+  const rolesData = roleData.roles as RoleType | RoleType[];
+  const actualRole = Array.isArray(rolesData) ? rolesData[0]?.role : rolesData?.role;
+
+  // ✅ Enforce role type
+  if (roleType === "admin" && actualRole !== "admin") {
+    setError("You are not an Admin.");
+    setLoading(false);
+    return;
+  }
+  if (roleType === "staff" && actualRole === "admin") {
+    setError("You cannot log in as Staff.");
+    setLoading(false);
+    return;
+  }
+
+  // ✅ Set context with company_id guaranteed from users table
+  setUserData({
+    id: userRecord.id,
+    company_id: userRecord.company_id,
+    name: userRecord.name,
+    role: actualRole,
+    designation_id: userRecord.designation_id,
+    department_id: userRecord.department_id,
+    email: data.user.email, // merge auth info
+  });
+
+  setLoading(false);
+
+  if (roleType === "admin") {
+    navigate("/dashboard");
+  } else {
+    navigate("/staff/dashboard");
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-blue-50 relative">
