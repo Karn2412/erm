@@ -38,6 +38,14 @@ const EmployeeAttendancePage = () => {
   const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth())
   const [selectedYear, setSelectedYear] = useState<number>(today.getFullYear())
   const [regularizeDate, setRegularizeDate] = useState<string | null>(null);
+  const [leaveDate, setLeaveDate] = useState<string | null>(null);  // IGNORE
+  const [wfhDate, setWFHDate] = useState<string | null>(null);  // IGNORE
+  const [approvedOffDate, setApprovedOffDate] = useState<string | null>(null);  // IGNORE
+
+  console.log(regularizeDate, leaveDate, wfhDate, approvedOffDate);
+  
+
+  const approvedOffDates = new Set<string>();
   console.log(regularizeDate);
   console.log(setSelectedMonth);
   console.log(setSelectedYear);
@@ -50,9 +58,10 @@ const EmployeeAttendancePage = () => {
       case 'Checked Out': return 'border-purple-500';
       case 'Absent': return 'border-red-500';
       case 'Regularize': return 'border-orange-400';
+      case 'Regularized': return 'border-orange-600';
       case 'Approved Off': return 'border-blue-500';
-      case 'Leave': return 'border-indigo-500';
-      case 'WFH': return 'border-purple-500';
+      case 'Approved Leave': return 'border-indigo-500';
+      case 'Work From Home': return 'border-purple-500';
       default: return 'border-gray-300';
     }
   };
@@ -63,9 +72,10 @@ const EmployeeAttendancePage = () => {
       case 'Checked Out': return 'bg-purple-500';
       case 'Absent': return 'bg-red-500';
       case 'Regularize': return 'bg-orange-400';
+      case 'Regularized': return 'bg-orange-600';
       case 'Approved Off': return 'bg-blue-500';
-      case 'Leave': return 'bg-indigo-500';
-      case 'WFH': return 'bg-purple-500';
+      case 'Approved Leave': return 'bg-indigo-500';
+      case 'Work From Home': return 'bg-purple-500';
       case 'Incomplete': return 'bg-gray-400';
       default: return 'bg-gray-300';
     }
@@ -93,7 +103,7 @@ const EmployeeAttendancePage = () => {
         .select('request_type, status, start_date, end_date')
         .eq('user_id', userId)
         .eq('status', 'APPROVED')
-        .in('request_type', ['LEAVE', 'WFH'])
+        .in('request_type', ['LEAVE', 'WFH', 'APPROVED OFF'])
         .lte('start_date', endDate)
         .gte('end_date', startDate);
 
@@ -108,6 +118,7 @@ const EmployeeAttendancePage = () => {
             const dayStr = format(d, 'yyyy-MM-dd');
             if (r.request_type === 'LEAVE') leaveDates.add(dayStr);
             if (r.request_type === 'WFH') wfhDates.add(dayStr);
+            if (r.request_type === 'APPROVED OFF') approvedOffDates.add(dayStr);
           }
         }
       }
@@ -130,7 +141,7 @@ const EmployeeAttendancePage = () => {
     date: formattedDate,
     hoursWorked: dbEntry?.total_worked_hours?.toFixed(2) ?? '0.00',
     expectedHours: dbEntry?.expected_hours?.toFixed(2) ?? '0.00',
-    status: 'Leave',
+     status: 'Approved Leave',   // match admin side
 
     // raw fields (required by type) — set null when absent
     first_check_in_time: dbEntry?.first_check_in_time ?? null,
@@ -156,8 +167,7 @@ if (wfhDates.has(formattedDate)) {
     date: formattedDate,
     hoursWorked: dbEntry?.total_worked_hours?.toFixed(2) ?? '0.00',
     expectedHours: dbEntry?.expected_hours?.toFixed(2) ?? '0.00',
-    status: 'WFH',
-
+    status: 'Work From Home',
     first_check_in_time: dbEntry?.first_check_in_time ?? null,
     last_check_out_time: dbEntry?.last_check_out_time ?? null,
     check_in_latitudes: dbEntry?.check_in_latitudes ?? null,
@@ -173,6 +183,28 @@ if (wfhDates.has(formattedDate)) {
   } as AttendanceRecord);
   continue;
 }
+if (approvedOffDates.has(formattedDate)) {
+  transformed.push({
+    day: weekday,
+    date: formattedDate,
+    hoursWorked: dbEntry?.total_worked_hours?.toFixed(2) ?? '0.00',
+    expectedHours: dbEntry?.expected_hours?.toFixed(2) ?? '0.00',
+    status: 'Approved Off',
+    first_check_in_time: dbEntry?.first_check_in_time ?? null,
+    last_check_out_time: dbEntry?.last_check_out_time ?? null,
+    check_in_latitudes: dbEntry?.check_in_latitudes ?? null,
+    check_in_longitudes: dbEntry?.check_in_longitudes ?? null,
+    check_out_latitudes: dbEntry?.check_out_latitudes ?? null,
+    check_out_longitudes: dbEntry?.check_out_longitudes ?? null,
+    attendance_statuses: dbEntry?.attendance_statuses ?? null,
+    request_type: dbEntry?.request_type ?? null,
+    request_status: dbEntry?.request_status ?? null,
+    checkInLocation: null,
+    checkOutLocation: null,
+  } as AttendanceRecord);
+  continue;
+}
+
 
 
 if (dbEntry) {
@@ -288,7 +320,7 @@ if (dbEntry) {
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(10);
+        
 
       setRequests(data || []);
       setReqLoading(false);
@@ -376,6 +408,9 @@ if (dbEntry) {
                 <AttendanceWeeklyTable
                   data={attendanceData}
                   onRegularize={(date) => setRegularizeDate(date)}
+                  onRequestLeave={(date) => setLeaveDate(date)}  // IGNORE
+                  onRequestWFH={(date) => setWFHDate(date)}  // IGNORE
+                  onRequestApprovedOff={(date) => setApprovedOffDate(date)}  // IGNORE
                 />
               ) : (
                 <div className="grid grid-cols-7 gap-3">
@@ -397,15 +432,20 @@ if (dbEntry) {
       const weekday = date.toLocaleDateString("en-US", { weekday: "long" });
       const isWeekend = weekday === "Saturday" || weekday === "Sunday";
 
-      // Resolve status (prefer found.status, but keep weekend/future rules)
-      let status: string;
-      if (found) {
-        if (isWeekend) status = "Approved Off";
-        else if (isFuture) status = "Upcoming";
-        else status = found.status ?? 'Absent';
-      } else {
-        status = isWeekend ? "Approved Off" : isFuture ? "Upcoming" : "Absent";
-      }
+// Resolve status (prefer found.status, but keep weekend/future rules)
+let status: string = 'Absent'; // default value
+if (found) {
+   if (!found.request_type || found.request_status !== "APPROVED") {
+     if (isWeekend) status = "Approved Off";
+     else if (isFuture) status = "Incomplete";
+      else status = found.status ?? 'Absent';
+   }
+   else {
+     status = found.status ?? 'Absent';
+   }
+} else {
+  status = isWeekend ? "Approved Off" : isFuture ? "Upcoming" : "Absent";
+}
 
       // ---- Resolve times and lat/long (support both shapes) ----
       const ciTime =

@@ -13,6 +13,9 @@ interface TableRow extends AttendanceRecord {
 interface AttendanceWeeklyTableProps {
   data: AttendanceRecord[];
   onRegularize?: (date: string) => void;
+  onRequestLeave?: (date: string) => void;
+  onRequestWFH?: (date: string) => void;
+  onRequestApprovedOff?: (date: string) => void;
 }
 
 const weekDays = [
@@ -120,12 +123,14 @@ const checkOutLong = checkOutLonLen > 0 ? dbEntry.check_out_longitudes?.[checkOu
           case "APPROVED OFF":
             status = "Approved Off";
             break;
+            
         }
+        console.log("Request type:", dbEntry);
+        
       }
 
       // Weekend / Future overrides
-      if (isWeekend) status = "Approved Off";
-      if (isFuture) status = "Incomplete";
+      
 
       return {
         ...dbEntry,
@@ -168,7 +173,7 @@ const checkOutLong = checkOutLonLen > 0 ? dbEntry.check_out_longitudes?.[checkOu
     if (!lat || !long) return <span>{time}</span>;
 
     return (
-      <div className="flex items-center justify-center gap-1">
+      <div className="flex items-center justify-start gap-1">
         <span>{time}</span>
         <a
           href={`https://www.google.com/maps?q=${lat},${long}`}
@@ -197,7 +202,7 @@ const checkOutLong = checkOutLonLen > 0 ? dbEntry.check_out_longitudes?.[checkOu
               <th className="px-4 py-3">Status</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="text-left">
             {weekData.map((row, idx) => {
               const checkInLat = row.check_in_latitudes?.[0] ?? null;
               const checkInLong = row.check_in_longitudes?.[0] ?? null;
@@ -216,7 +221,7 @@ const checkOutLong = checkOutLonLen > 0 ? dbEntry.check_out_longitudes?.[checkOu
                     {row.hoursWorked} / {row.expectedHours}
                   </td>
 
-                  <td className="py-3 px-4 text-center">
+                  <td className="py-3 px-4">
                     {renderTimeWithLocation(
                       row.first_check_in_time,
                       checkInLat,
@@ -224,7 +229,7 @@ const checkOutLong = checkOutLonLen > 0 ? dbEntry.check_out_longitudes?.[checkOu
                     )}
                   </td>
 
-                  <td className="py-3 px-4 text-center">
+                  <td className="py-3 px-4">
                     {renderTimeWithLocation(
                       row.last_check_out_time,
                       checkOutLat,
@@ -233,24 +238,17 @@ const checkOutLong = checkOutLonLen > 0 ? dbEntry.check_out_longitudes?.[checkOu
                   </td>
 
 
-                  <td className="px-4 py-3 rounded-r-xl">
-                    <div className="flex items-center space-x-2">
-                      <span
-                        className={`h-2 w-2 rounded-full ${getDotColor(
-                          row.status
-                        )}`}
-                      ></span>
-                      <span className="text-sm font-medium text-gray-700">
-                        {row.status}
-                      </span>
-                      {row.request_type &&
-                        row.request_status === "APPROVED" && (
-                          <span className="ml-2 px-2 py-1 rounded bg-green-200 text-green-700 text-xs font-semibold">
-                            {row.request_type}
-                          </span>
-                        )}
-                    </div>
-                  </td>
+                 <td className="px-4 py-3 rounded-r-xl">
+  <div className="flex items-center space-x-2">
+    <span
+      className={`h-2 w-2 rounded-full ${getDotColor(row.status)}`}
+    ></span>
+    <span className="text-sm font-medium text-gray-700">
+      {row.status}
+    </span>
+  </div>
+</td>
+
                 </tr>
               );
             })}

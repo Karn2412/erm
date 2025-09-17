@@ -72,14 +72,17 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   setLoading(true);
 
-  const payload = {
-    company_id: userData.company_id,
-    user_id: userData.id,
-    request_type: "REGULARIZATION",
-    requested_check_in: `${formData.date}T${formData.checkIn}:00+00:00`,
-    requested_check_out: `${formData.date}T${formData.checkOut}:00+00:00`,
-    reason: formData.reason
-  };
+const payload = {
+  company_id: userData.company_id,
+  user_id: userData.id,
+  request_type: "REGULARIZATION",
+  requested_check_in: `${formData.date}T${formData.checkIn}:00+00:00`,
+  requested_check_out: `${formData.date}T${formData.checkOut}:00+00:00`,
+  start_date: formData.date,  // <-- ADD THIS
+  end_date: formData.date,    // optional, but good for consistency
+  reason: formData.reason
+};
+
 
   console.log("Submitting payload:", payload);
 
