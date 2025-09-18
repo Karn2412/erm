@@ -61,108 +61,114 @@ const AttendanceWeeklyTable: React.FC<AttendanceWeeklyTableProps> = ({
   const today = new Date();
   const start = startOfWeek(today, { weekStartsOn: 1 }); // Monday
 
-  const weekData: TableRow[] = weekDays.map((day, index) => {
-    const date = addDays(start, index);
-    const dateStr = format(date, "yyyy-MM-dd");
-    const isWeekend = day === "Saturday" || day === "Sunday";
-    const isFuture = isAfter(date, today);
+ const weekData: TableRow[] = weekDays.map((day, index) => {
+  const date = addDays(start, index);
+  const dateStr = format(date, "yyyy-MM-dd");
+  const isWeekend = day === "Saturday" || day === "Sunday";
+  const isFuture = isAfter(date, today);
 
-    const dbEntry = data.find(
-      (d) => d.date === dateStr || d.attendance_date === dateStr
-    );
+  const dbEntry = data.find(
+    (d) => d.date === dateStr || d.attendance_date === dateStr
+  );
 
-    if (dbEntry) {
-      
+  if (dbEntry) {
+    const checkInLat = dbEntry.check_in_latitudes?.[0] ?? null;
+    const checkInLong = dbEntry.check_in_longitudes?.[0] ?? null;
 
-      const checkInTime = dbEntry.first_check_in_time
-        ? new Date(dbEntry.first_check_in_time).toLocaleTimeString([], {
+    // ✅ pick *last* element for checkout
+    const checkOutLen = dbEntry.check_out_latitudes?.length ?? 0;
+    const checkOutLat =
+      checkOutLen > 0 ? dbEntry.check_out_latitudes?.[checkOutLen - 1] ?? null : null;
+
+    const checkOutLonLen = dbEntry.check_out_longitudes?.length ?? 0;
+    const checkOutLong =
+      checkOutLonLen > 0 ? dbEntry.check_out_longitudes?.[checkOutLonLen - 1] ?? null : null;
+
+    const checkInTime = dbEntry.first_check_in_time
+      ? new Date(dbEntry.first_check_in_time).toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         })
-        : null;
+      : null;
 
-      const checkOutTime = dbEntry.last_check_out_time
-        ? new Date(dbEntry.last_check_out_time).toLocaleTimeString([], {
+    const checkOutTime = dbEntry.last_check_out_time
+      ? new Date(dbEntry.last_check_out_time).toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         })
-        : null;
+      : null;
 
-        // inside weekData map() when you have dbEntry:
-const checkInLat = dbEntry.check_in_latitudes?.[0] ?? null;
-const checkInLong = dbEntry.check_in_longitudes?.[0] ?? null;
+    // ---- STATUS RESOLUTION ----
+    let status = dbEntry.attendance_statuses?.[0] || "Absent";
 
-// pick *last* element for check-out (safer)
-const checkOutLen = dbEntry.check_out_latitudes?.length ?? 0;
-const checkOutLat = checkOutLen > 0 ? dbEntry.check_out_latitudes?.[checkOutLen - 1] ?? null : null;
-
-const checkOutLonLen = dbEntry.check_out_longitudes?.length ?? 0;
-const checkOutLong = checkOutLonLen > 0 ? dbEntry.check_out_longitudes?.[checkOutLonLen - 1] ?? null : null;
-
-
-      // ---- STATUS RESOLUTION (same as monthly) ----
-      let status = dbEntry.attendance_statuses?.[0] || "Absent";
-
-      if (dbEntry.last_check_out_time) {
-        status = "Checked Out";
-      } else if (dbEntry.first_check_in_time) {
-        status = "Checked In";
-      }
-
-      if (dbEntry.request_type && dbEntry.request_status === "APPROVED") {
-        switch (dbEntry.request_type) {
-          case "REGULARIZATION":
-            status = "Regularized";
-            break;
-          case "WFH":
-            status = "Work From Home";
-            break;
-          case "LEAVE":
-            status = "Approved Leave";
-            break;
-          case "APPROVED OFF":
-            status = "Approved Off";
-            break;
-            
-        }
-        console.log("Request type:", dbEntry);
-        
-      }
-
-      // Weekend / Future overrides
-      
-
-      return {
-        ...dbEntry,
-        day,
-        date: dateStr,
-        status,
-        first_check_in_time: checkInTime,
-        last_check_out_time: checkOutTime,
-        check_in_latitudes: checkInLat ? [checkInLat] : null,
-        check_in_longitudes: checkInLong ? [checkInLong] : null,
-        check_out_latitudes: checkOutLat ? [checkOutLat] : null,
-        check_out_longitudes: checkOutLong ? [checkOutLong] : null,
-      };
+    if (dbEntry.last_check_out_time) {
+      status = "Checked Out";
+    } else if (dbEntry.first_check_in_time) {
+      status = "Checked In";
     }
 
-    // ---- FALLBACK (no record found) ----
-    let status = "Absent";
-    if (isWeekend) status = "Approved Off";
-    if (isFuture) status = "Incomplete";
+    // ✅ Request overrides (if approved)
+    if (dbEntry.request_type && dbEntry.request_status === "APPROVED") {
+      switch (dbEntry.request_type) {
+        case "REGULARIZATION":
+          status = "Regularized";
+          break;
+        case "WFH":
+          status = "Work From Home";
+          break;
+        case "LEAVE":
+          status = "Approved Leave";
+          break;
+        case "APPROVED OFF":
+          status = "Approved Off";
+          break;
+      }
+    }
+
+    // ✅ Past incomplete → Absent
+    if (status === "Incomplete" && !isFuture) {
+      status = "Absent";
+    }
+
+   
+
+    // // ✅ Future fallback
+    // if (isFuture && !dbEntry.first_check_in_time && !dbEntry.last_check_out_time) {
+    //   status = "Incomplete";
+    // }
 
     return {
+      ...dbEntry,
       day,
       date: dateStr,
-      hoursWorked: "0.00",
-      expectedHours: "0.00",
-      check_in_latitudes: null,
-      check_in_longitudes: null,
-      check_out_latitudes: null,
-      check_out_longitudes: null,
       status,
+      first_check_in_time: checkInTime,
+      last_check_out_time: checkOutTime,
+      check_in_latitudes: checkInLat ? [checkInLat] : null,
+      check_in_longitudes: checkInLong ? [checkInLong] : null,
+      check_out_latitudes: checkOutLat ? [checkOutLat] : null,
+      check_out_longitudes: checkOutLong ? [checkOutLong] : null,
     };
-  });
+  }
+
+  // ---- FALLBACK (no record found) ----
+  let status = "Absent";
+  if (isWeekend) status = "Approved Off";
+  if (isFuture) status = "Incomplete";
+
+  return {
+    day,
+    date: dateStr,
+    hoursWorked: "0.00",
+    expectedHours: "0.00",
+    check_in_latitudes: null,
+    check_in_longitudes: null,
+    check_out_latitudes: null,
+    check_out_longitudes: null,
+    status,
+  };
+});
+
 
   const renderTimeWithLocation = (
     time?: string | null,

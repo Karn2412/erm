@@ -332,11 +332,11 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
                     <td className="py-2 px-3">{item.hoursWorked}</td>
                     <td className="py-2 px-3 rounded-r-lg">
                       {item.status}
-                      {item.requestType && item.requestStatus === "APPROVED" && (
-                        <span className="ml-2 px-2 py-1 rounded bg-green-200 text-green-700 text-xs font-semibold">
-                          {item.requestType}
-                        </span>
-                      )}
+                      {/* {item.requestType && item.requestStatus === "APPROVED" && (
+                        // <span className="ml-2 px-2 py-1 rounded bg-green-200 text-green-700 text-xs font-semibold">
+                        //   {item.requestType}
+                        // </span>
+                      )} */}
                     </td>
                   </tr>
                 ))}

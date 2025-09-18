@@ -57,11 +57,12 @@ const EmployeeAttendancePage = () => {
       case 'Checked In': return 'border-green-500';
       case 'Checked Out': return 'border-purple-500';
       case 'Absent': return 'border-red-500';
-      case 'Regularize': return 'border-orange-400';
-      case 'Regularized': return 'border-orange-600';
+      case 'Regularize': return 'border-orange-300';
+      case 'Regularized': return 'border-orange-300';
       case 'Approved Off': return 'border-blue-500';
       case 'Approved Leave': return 'border-indigo-500';
       case 'Work From Home': return 'border-purple-500';
+      case 'Request Sent': return 'border-yellow-400';
       default: return 'border-gray-300';
     }
   };
@@ -72,11 +73,13 @@ const EmployeeAttendancePage = () => {
       case 'Checked Out': return 'bg-purple-500';
       case 'Absent': return 'bg-red-500';
       case 'Regularize': return 'bg-orange-400';
-      case 'Regularized': return 'bg-orange-600';
+      case 'Regularized': return 'bg-orange-400';
       case 'Approved Off': return 'bg-blue-500';
       case 'Approved Leave': return 'bg-indigo-500';
       case 'Work From Home': return 'bg-purple-500';
       case 'Incomplete': return 'bg-gray-400';
+      case 'Request Sent': return 'bg-yellow-400';
+      
       default: return 'bg-gray-300';
     }
   };
@@ -212,20 +215,22 @@ if (dbEntry) {
   const expected = Number(dbEntry.expected_hours ?? 0);
 
   // ✅ Trust backend first
-  let status: string = dbEntry.attendance_statuses?.[0] || "Absent";
+// ✅ Trust backend first
+let status: string = dbEntry.attendance_statuses?.[0] || "Absent";
 
-  // ---- Staff-specific override ----
+// If backend already says "Regularized", keep it
+if (status !== "Regularized") {
   const underHours = !isWeekend && !isFuture && expected > 0 && worked + 0.01 < expected;
 
   if (underHours) {
     if (dbEntry.first_check_in_time) {
-      // staff showed up but did not complete hours
-      status = "Regularize";
+      status = "Regularize"; // pending employee action
     } else {
-      // no check-in at all
-      status = "Absent";
+      status = "Absent"; // no check-in
     }
   }
+}
+
 
   // (rest of your record construction remains unchanged)
   const record: AttendanceRecord = {
@@ -328,6 +333,19 @@ if (dbEntry) {
 
     fetchRequests();
   }, [userId]);
+  const pendingRegularizeDates = new Set<string>(
+  requests
+    .filter(r => r.request_type === "REGULARIZATION" && r.status === "PENDING")
+    .flatMap(r => {
+      if (!r.start_date) return [];
+      const start = new Date(r.start_date);
+      const end = r.end_date ? new Date(r.end_date) : start;
+      const days: string[] = [];
+      for (let d = start; d <= end; d.setDate(d.getDate() + 1)) {
+        days.push(format(d, "yyyy-MM-dd"));
+      }
+      return days;
+    }));
 
   if (loading) return <div>Loading attendance...</div>;
 
@@ -432,20 +450,46 @@ if (dbEntry) {
       const weekday = date.toLocaleDateString("en-US", { weekday: "long" });
       const isWeekend = weekday === "Saturday" || weekday === "Sunday";
 
+
 // Resolve status (prefer found.status, but keep weekend/future rules)
-let status: string = 'Absent'; // default value
+// ---- Resolve status with unified logic ----
+let status: string;
+
 if (found) {
-   if (!found.request_type || found.request_status !== "APPROVED") {
-     if (isWeekend) status = "Approved Off";
-     else if (isFuture) status = "Incomplete";
-      else status = found.status ?? 'Absent';
-   }
-   else {
-     status = found.status ?? 'Absent';
-   }
+  // ✅ Trust backend statuses first (Regularized / Checked In / Checked Out / etc.)
+  if (found.status === "Regularized" || found.status === "Regularize") {
+    status = found.status;
+  } else {
+    status = found.status ?? "Absent";
+  }
+
+  // ✅ Override based on requests if APPROVED
+  if (found.request_type && found.request_status === "APPROVED") {
+    if (found.request_type === "LEAVE") status = "Approved Leave";
+    if (found.request_type === "WFH") status = "Work From Home";
+    if (found.request_type === "APPROVED OFF") status = "Approved Off";
+  }
+
+  // ✅ Pending Regularization override
+    // ✅ NEW: Override if there’s a PENDING regularization
+  if (pendingRegularizeDates.has(formatted)) {
+    status = "Request Sent";
+  }
+
+  // ✅ Handle future/past rules
+  if (status === "Incomplete" && !isFuture) {
+    status = "Absent"; // Past incomplete becomes Absent
+  }
+  if (isFuture && !found.status) {
+    status = "Incomplete"; // Future no record → Incomplete
+  }
 } else {
+  // ✅ No record fallback
   status = isWeekend ? "Approved Off" : isFuture ? "Upcoming" : "Absent";
 }
+
+
+
 
       // ---- Resolve times and lat/long (support both shapes) ----
       const ciTime =
