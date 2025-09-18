@@ -9,6 +9,7 @@ interface Props {
   onDepartmentChange: (deptId: string) => void;
   onSearchChange: (query: string) => void;
   onDesignationChange: (desigId: string) => void; // ✅ NEW
+  companyId: string | number; // ✅ NEW
 }
 
 const AttendanceFilterAndLegend: React.FC<Props> = ({
@@ -17,6 +18,7 @@ const AttendanceFilterAndLegend: React.FC<Props> = ({
   onDepartmentChange,
   onSearchChange,
   onDesignationChange,
+  companyId, // ✅ get companyId
 }) => {
   const [departments, setDepartments] = useState<
     { id: string; department_name: string }[]
@@ -32,6 +34,7 @@ useEffect(() => {
     const { data, error } = await supabase
       .from("designations")
       .select("id, designation")
+      .eq("company_id", companyId)
       .order("designation", { ascending: true });
     if (!error && data) {
       setDesignations(data);
@@ -46,6 +49,7 @@ useEffect(() => {
       const { data, error } = await supabase
         .from("departments")
         .select("id, department_name")
+        .eq("company_id", companyId)
         .order("department_name", { ascending: true });
 
       if (!error && data) {

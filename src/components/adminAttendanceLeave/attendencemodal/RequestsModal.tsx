@@ -11,17 +11,17 @@ const RequestsModal: React.FC<{ onClose: () => void; userId: string }> = ({
   const [loading, setLoading] = useState(false);
 
   // run populate_daily_wages for a given date
-const runDailyWagesJob = async (date: string) => {
-  const { error } = await supabase.rpc("populate_daily_wages", {
-    target_date: date, // e.g. '2025-08-24'
-  });
+  const runDailyWagesJob = async (date: string) => {
+    const { error } = await supabase.rpc("populate_daily_wages", {
+      target_date: date, // e.g. '2025-08-24'
+    });
 
-  if (error) {
-    console.error("❌ Error running daily wages job:", error);
-  } else {
-    console.log("✅ Daily wages populated for", date);
-  }
-};
+    if (error) {
+      console.error("❌ Error running daily wages job:", error);
+    } else {
+      console.log("✅ Daily wages populated for", date);
+    }
+  };
 
   // ✅ state to hold approved check-in/out for each request
   const [approvedTimes, setApprovedTimes] = useState<
@@ -63,36 +63,36 @@ const runDailyWagesJob = async (date: string) => {
   };
 
   // Update status for a single request (set reviewed_by + approved times)
- const updateStatus = async (
-  id: string,
-  newStatus: string,
-  approvedIn?: string,
-  approvedOut?: string
-) => {
-  const reviewer = await getSessionUserId();
-  const { data, error } = await supabase
-    .from("attendance_requests")
-    .update({
-      status: newStatus,
-      reviewed_by: reviewer,
-      approved_check_in: approvedIn ?? null,
-      approved_check_out: approvedOut ?? null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .select("start_date"); // fetch date to refresh daily_wages
+  const updateStatus = async (
+    id: string,
+    newStatus: string,
+    approvedIn?: string,
+    approvedOut?: string
+  ) => {
+    const reviewer = await getSessionUserId();
+    const { data, error } = await supabase
+      .from("attendance_requests")
+      .update({
+        status: newStatus,
+        reviewed_by: reviewer,
+        approved_check_in: approvedIn ?? null,
+        approved_check_out: approvedOut ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select("start_date"); // fetch date to refresh daily_wages
 
-  if (error) {
-    console.error("Error updating status:", error);
-  } else {
-    fetchRequests();
-    // ✅ trigger daily_wages refresh
-    const req = data?.[0];
-    if (req?.start_date) {
-      await runDailyWagesJob(req.start_date);
+    if (error) {
+      console.error("Error updating status:", error);
+    } else {
+      fetchRequests();
+      // ✅ trigger daily_wages refresh
+      const req = data?.[0];
+      if (req?.start_date) {
+        await runDailyWagesJob(req.start_date);
+      }
     }
-  }
-};
+  };
 
 
   // Update status for all in current tab
@@ -100,7 +100,7 @@ const runDailyWagesJob = async (date: string) => {
     const ids = getCurrentData().map((req) => req.id);
     if (!ids.length) return;
     const reviewer = await getSessionUserId();
-    await runDailyWagesJob(new Date().toISOString().slice(0, 10)); 
+    await runDailyWagesJob(new Date().toISOString().slice(0, 10));
 
 
     const { error } = await supabase
@@ -145,16 +145,32 @@ const runDailyWagesJob = async (date: string) => {
         className="bg-[#f1f3ff] rounded-lg p-4 mb-4 flex justify-between items-center"
       >
         <div className="flex-1 text-sm">
-          <div className="grid grid-cols-2 gap-4">
-            <p>
-              <span className="font-semibold">Requested Check-in :</span>{" "}
-              {item.requested_check_in ?? "--"}
-            </p>
-            <p>
-              <span className="font-semibold">Requested Check-out :</span>{" "}
-              {item.requested_check_out ?? "--"}
-            </p>
+          {/* Requested times - shown like Approved inputs but read-only */}
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">
+                Requested Check-in
+              </label>
+              <input
+                type="datetime-local"
+                value={item.requested_check_in ? item.requested_check_in.substring(0, 16) : ""}
+                readOnly
+                className=" px-2 py-1 rounded w-full text-sm bg-gray-100 cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">
+                Requested Check-out
+              </label>
+              <input
+                type="datetime-local"
+                value={item.requested_check_out ? item.requested_check_out.substring(0, 16) : ""}
+                readOnly
+                className=" px-2 py-1 rounded w-full text-sm bg-gray-100 cursor-not-allowed"
+              />
+            </div>
           </div>
+
           <div className="grid grid-cols-2 gap-4 mt-2">
             <p>
               <span className="font-semibold">Date :</span>{" "}
@@ -172,18 +188,18 @@ const runDailyWagesJob = async (date: string) => {
                 <span className="font-semibold">Approved Check-in :</span>{" "}
                 {item.approved_check_in
                   ? new Date(item.approved_check_in).toLocaleString([], {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })
                   : "--"}
               </p>
               <p>
                 <span className="font-semibold">Approved Check-out :</span>{" "}
                 {item.approved_check_out
                   ? new Date(item.approved_check_out).toLocaleString([], {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })
                   : "--"}
               </p>
             </div>
@@ -397,27 +413,26 @@ const runDailyWagesJob = async (date: string) => {
             <button
               key={tab}
               onClick={() => handleTabChange(tab)}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${
-                activeTab === tab
+              className={`px-4 py-2 rounded-md text-sm font-medium ${activeTab === tab
                   ? "bg-blue-100 text-blue-600 border border-blue-400"
                   : "bg-gray-100 text-gray-600"
-              }`}
+                }`}
             >
               {tab}
             </button>
           ))}
         </div>
         <div className="bg-[#eeeeee] p-4 rounded-xl max-h-[400px] overflow-y-auto">
-  {loading ? (
-    <p>Loading...</p>
-  ) : getCurrentData().length === 0 ? (
-    <p className="text-center text-gray-500 py-6">
-      No requests for the time being
-    </p>
-  ) : (
-    getCurrentData().map((item) => renderRequest(item))
-  )}
-</div>
+          {loading ? (
+            <p>Loading...</p>
+          ) : getCurrentData().length === 0 ? (
+            <p className="text-center text-gray-500 py-6">
+              No requests for the time being
+            </p>
+          ) : (
+            getCurrentData().map((item) => renderRequest(item))
+          )}
+        </div>
 
         <div className="mt-4 flex justify-center gap-4">
           <button

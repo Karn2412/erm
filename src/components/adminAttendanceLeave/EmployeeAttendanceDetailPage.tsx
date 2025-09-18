@@ -51,6 +51,8 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
         return "border-gray-300";
       case "Checked Out":
         return "border-purple-500";
+      case "Pending Request":
+        return "border-yellow-400";
       default:
         return "border-gray-300";
     }
@@ -74,6 +76,8 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
         return "bg-gray-300";
       case "Checked Out":
         return "bg-purple-500";
+      case "Pending Request":
+        return "bg-yellow-400";
       default:
         return "bg-gray-300";
     }
@@ -178,20 +182,21 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
           // ✅ Trust backend
           let status: string;
 
-          if (Array.isArray(dbEntry?.attendance_statuses) && dbEntry.attendance_statuses.length > 0) {
-            status = dbEntry.attendance_statuses[0];
+if (dbEntry?.request_type && dbEntry?.request_status === "PENDING") {
+  // ✅ Pending request explicitly
+  status = "Pending Request";
+} else if (
+  Array.isArray(dbEntry?.attendance_statuses) &&
+  dbEntry.attendance_statuses.length > 0
+) {
+  status = dbEntry.attendance_statuses[0];
 
-            // 🔄 Override rule:
-            if (status === "Incomplete" && dateObj < today) {
-              status = "Absent"; // Past Incomplete → Absent
-            }
-          } else {
-            if (isFuture) {
-              status = "Incomplete"; // Future with no status → Incomplete
-            } else {
-              status = "Absent"; // Past with no status → Absent
-            }
-          }
+  if (status === "Incomplete" && dateObj < today) {
+    status = "Absent"; // Past Incomplete → Absent
+  }
+} else {
+  status = isFuture ? "Incomplete" : "Absent";
+}
 
 
 
@@ -372,7 +377,11 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
                     const formatted = format(date, "yyyy-MM-dd");
                     const found = attendanceData.find((d) => d.date === formatted);
 
-                    const status = found?.status || "Incomplete";
+                    let status = found?.status || "Incomplete";
+if (found?.requestType && found?.requestStatus === "PENDING") {
+  status = "Pending Request";
+}
+
 
                     calendarDays.push(
                       <div

@@ -13,7 +13,7 @@ const AttendanceAndLeavePage: React.FC = () => {
   const [selectedDept, setSelectedDept] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedDesignation, setSelectedDesignation] = useState<string>("");
-
+  const [companyId, setCompanyId] = useState<string | null>(null); 
   // 🔄 Load attendance from new unified view
   const loadAttendance = async () => {
     setLoading(true);
@@ -36,6 +36,7 @@ const AttendanceAndLeavePage: React.FC = () => {
         .single();
 
       const companyId = adminData?.company_id;
+      setCompanyId(companyId || null); // ✅ save companyId
       if (!companyId) {
         setAttendanceData([]);
         setLoading(false);
@@ -81,13 +82,16 @@ const AttendanceAndLeavePage: React.FC = () => {
     <div className="flex">
       <div className="flex-1 bg-white rounded-2xl">
         <div className="p-6">
-          <AttendanceFilterAndLegend
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-            onDepartmentChange={setSelectedDept}
-            onSearchChange={setSearchQuery}
-            onDesignationChange={setSelectedDesignation} // ✅
-          />
+          {companyId && ( // ✅ only render child when companyId is ready
+            <AttendanceFilterAndLegend
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+              onDepartmentChange={setSelectedDept}
+              onSearchChange={setSearchQuery}
+              onDesignationChange={setSelectedDesignation}
+              companyId={companyId} // ✅ pass down companyId
+            />
+          )}
           {loading ? (
             <div className="text-center mt-10 text-gray-500">
               Loading attendance...
