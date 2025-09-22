@@ -39,7 +39,7 @@ const getDotColor = (status: string) => {
       return "bg-purple-500";
     case "Absent":
       return "bg-red-500";
-    case "Approved Off":
+    case "Weekly Off":
       return "bg-blue-500";
     case "Approved Leave":
       return "bg-indigo-500";

@@ -38,6 +38,59 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
   const [workLocations, setWorkLocations] = useState<any[]>([]);
   console.log("workLocations>>>>>>>>>>>>", workLocations);
     const [loading, setLoading] = useState(false); // ✅ loading state
+    const [emailStatus, setEmailStatus] = useState<
+  "available" | "exists" | "empty" | "invalid" | ""
+>("");
+const validateEmailFormat = (email: string) => {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(email);
+};
+
+const checkEmail = async (email: string) => {
+  if (!email) {
+    setEmailStatus("empty"); // 👈 show "Enter email"
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("user_with_email")
+      .select("email")
+      .ilike("email", email)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error checking email:", error);
+      setEmailStatus("empty");
+      return;
+    }
+
+    setEmailStatus(data ? "exists" : "available");
+  } catch (err) {
+    console.error("Email check failed:", err);
+    setEmailStatus("empty");
+  }
+};
+
+
+const daysOfWeek = [
+  { value: 0, label: "Sunday" },
+  { value: 1, label: "Monday" },
+  { value: 2, label: "Tuesday" },
+  { value: 3, label: "Wednesday" },
+  { value: 4, label: "Thursday" },
+  { value: 5, label: "Friday" },
+  { value: 6, label: "Saturday" },
+];
+
+const [weeklyOffs, setWeeklyOffs] = useState<number[]>([]);
+
+const toggleDay = (day: number) => {
+  setWeeklyOffs((prev) =>
+    prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+  );
+};
+
 
   useEffect(() => {
     const fetchDesignations = async () => {
@@ -131,158 +184,153 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      // Get session token
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
+  try {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
 
-      if (sessionError || !session?.access_token) {
-        alert("Session not found. Please login again.");
-        setLoading(false); // ✅ stop loading
-        return;
+    if (sessionError || !session?.access_token) {
+      alert("Session not found. Please login again.");
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.department_id) {
+      alert("Please select a department.");
+      setLoading(false);
+      return;
+    }
+    if (!formData.gender_id) {
+      alert("Please select a gender.");
+      setLoading(false);
+      return;
+    }
+
+    const accessToken = session.access_token;
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      alert("Failed to get current user.");
+      setLoading(false);
+      return;
+    }
+
+    const { data: roleRecord, error: roleError } = await supabase
+      .from("user_roles")
+      .select("company_id, roles(role)")
+      .eq("id", user.id)
+      .single();
+
+    if (roleError || !roleRecord) {
+      alert("User role not found.");
+      setLoading(false);
+      return;
+    }
+
+    const companyId = roleRecord.company_id;
+    const fullName = `${formData.firstName} ${formData.middleName} ${formData.lastName}`.trim();
+    const formattedDate = new Date(formData.dateOfJoining)
+      .toISOString()
+      .split("T")[0];
+
+    const requestBody = {
+      email: formData.email,
+      password: formData.password,
+      name: fullName,
+      number: formData.number,
+      gender_id: formData.gender_id,
+      date_of_joining: formattedDate,
+      designation_id: formData.designation_id,
+      department_id: formData.department_id,
+      company_id: companyId,
+      role_name: formData.role_name,
+      work_location: formData.work_location,
+       weekly_offs: weeklyOffs,
+    };
+
+    const timeToSeconds = (timeStr: string) => {
+      if (!timeStr) return 0;
+      const [hours, minutes] = timeStr.split(":").map(Number);
+      return hours * 3600 + minutes * 60;
+    };
+
+    const response = await fetch(
+      "https://xdcbcvvlbyizxhrbramv.supabase.co/functions/v1/my-function",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(requestBody),
       }
-      if (!formData.department_id) {
-        alert("Please select a department.");
-        return;
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      if (result.error === "Email already exists") {
+        alert("❌ This email is already registered. Please use another one.");
+      } else {
+        alert(`❌ Failed: ${result.error}`);
       }
-      if (!formData.gender_id) {
-        alert("Please select a gender.");
-        return;
-      }
+      setLoading(false);
+      return; // 🚫 stop here, don’t try inserting working hours
+    }
 
-      // inside handleSubmit
-      if (!formData.department_id) {
-        alert("Please select a department.");
-        return;
-      }
+    const newUserId = result.user_id;
 
-      const accessToken = session.access_token;
+    const { error: workHoursError } = await supabase
+      .from("working_hours")
+      .insert([
+        {
+          company_id: companyId,
+          user_id: newUserId,
+          work_start: timeToSeconds(formData.work_start),
+          work_end: timeToSeconds(formData.work_end),
+          created_at: new Date().toISOString(),
+        },
+      ]);
 
-      // Get current logged-in user
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-      if (userError || !user) {
-        alert("Failed to get current user.");
-        return;
-      }
+    if (workHoursError) {
+      alert(`⚠️ Employee created, but failed to set working hours: ${workHoursError.message}`);
+    } else {
+      alert("✅ Employee and working hours added successfully!");
+    }
 
-      // Get company_id of current admin
-      const { data: roleRecord, error: roleError } = await supabase
-        .from("user_roles")
-        .select("company_id, roles(role)")
-        .eq("id", user.id)
-        .single();
+    onEmployeeCreated(newUserId, companyId, formattedDate);
 
-      if (roleError || !roleRecord) {
-        alert("User role not found.");
-        return;
-      }
-
-      const companyId = roleRecord.company_id;
-      const fullName =
-        `${formData.firstName} ${formData.middleName} ${formData.lastName}`.trim();
-      const formattedDate = new Date(formData.dateOfJoining)
-        .toISOString()
-        .split("T")[0];
-
-      const requestBody = {
-  email: formData.email,
-  password: formData.password,
-  name: fullName,
-  number: formData.number,
-  gender_id: formData.gender_id,
-  date_of_joining: formattedDate,
-  designation_id: formData.designation_id,
-  department_id: formData.department_id,
-  company_id: companyId,
-  role_name: formData.role_name,
-  work_location: formData.work_location, // ✅ send selected location
+    setFormData({
+      firstName: "",
+      middleName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      number: "",
+      gender_id: "",
+      dateOfJoining: "",
+      designation_id: "",
+      department_id: "",
+      role_name: "staff",
+      work_start: "",
+      work_end: "",
+      work_location: "",
+    });
+  } catch (err: any) {
+    alert("Unexpected error: " + err.message);
+  } finally {
+    setLoading(false); // ✅ always stop loading
+  }
 };
 
-
-      // Helper function to convert HH:mm to seconds
-      const timeToSeconds = (timeStr: string) => {
-        if (!timeStr) return 0;
-        const [hours, minutes] = timeStr.split(":").map(Number);
-        return hours * 3600 + minutes * 60;
-      };
-
-      console.log("requestBody>>>>>>>>>>>>>", requestBody);
-
-      // Call Edge Function
-      const response = await fetch(
-        "https://xdcbcvvlbyizxhrbramv.supabase.co/functions/v1/my-function",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify(requestBody),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        alert(`❌ Failed: ${result.error}`);
-      } else {
-        const newUserId = result.user_id;
-
-        // Insert work hours into working_hours table
-        const { error: workHoursError } = await supabase
-          .from("working_hours")
-          .insert([
-            {
-              company_id: companyId,
-              user_id: newUserId,
-              work_start: timeToSeconds(formData.work_start),
-              work_end: timeToSeconds(formData.work_end),
-              created_at: new Date().toISOString(),
-            },
-          ]);
-
-        if (workHoursError) {
-          alert(
-            `⚠️ Employee created, but failed to set working hours: ${workHoursError.message}`
-          );
-        } else {
-          alert("✅ Employee and working hours added successfully!");
-        }
-
-        // Pass IDs to parent
-        onEmployeeCreated(newUserId, companyId, formattedDate); // ✅ pass DOJ
-
-        // Reset form
-        setFormData({
-          firstName: "",
-          middleName: "",
-          lastName: "",
-          email: "",
-          password: "",
-          number: "",
-          gender_id: "", // ✅ reset to empty
-          dateOfJoining: "",
-          designation_id: "",
-          department_id: "",
-          role_name: "staff",
-          work_start: "",
-          work_end: "",
-          work_location: "",
-        });
-      }
-    } catch (err: any) {
-      alert("Unexpected error: " + err.message);
-    }
-  };
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 ">
@@ -342,14 +390,46 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Work Email <span className="text-red-500">*</span>
             </label>
-            <input
-              type="email"
-              name="email"
-              placeholder="abc@company.com"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-3/4 px-3 py-2 border border-blue-400 rounded-full"
-            />
+     <input
+  type="email"
+  name="email"
+  placeholder="abc@company.com"
+  value={formData.email}
+  onChange={(e) => {
+    handleChange(e);
+    const value = e.target.value;
+
+    if (!value) {
+      setEmailStatus("empty");
+      return;
+    }
+
+    if (!validateEmailFormat(value)) {
+      setEmailStatus("invalid");
+      return;
+    }
+
+    // ✅ only call Supabase after valid format
+    checkEmail(value);
+  }}
+  className="w-3/4 px-3 py-2 border border-blue-400 rounded-full"
+/>
+
+
+{emailStatus === "empty" && (
+  <p className="text-gray-500 text-sm mt-1">ℹ️ Enter email</p>
+)}
+{emailStatus === "invalid" && (
+  <p className="text-orange-500 text-sm mt-1">⚠️ Please enter a valid email</p>
+)}
+{emailStatus === "exists" && (
+  <p className="text-red-500 text-sm mt-1">❌ Email already exists</p>
+)}
+{emailStatus === "available" && (
+  <p className="text-green-600 text-sm mt-1">✅ Email available</p>
+)}
+
+
           </div>
           <div className="relative w-3/4">
       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -433,14 +513,32 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Mobile Number <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              name="number"
-              placeholder="+91 9876543210"
-              value={formData.number}
-              onChange={handleChange}
-              className="w-3/4 px-3 py-2 border border-blue-400 rounded-full"
-            />
+          <input
+  type="tel"
+  name="number"
+  placeholder="+91 9876543210"
+  value={formData.number}
+  onChange={(e) => {
+    let val = e.target.value;
+
+    // always start with +
+    if (!val.startsWith("+")) {
+      val = "+" + val.replace(/\D/g, "");
+    } else {
+      // keep + at start, strip all other non-digits
+      val = "+" + val.substring(1).replace(/\D/g, "");
+    }
+
+    // restrict to max 15 characters (+ plus up to 14 digits)
+    if (val.length > 15) {
+      val = val.substring(0, 15);
+    }
+
+    setFormData((prev) => ({ ...prev, number: val }));
+  }}
+  className="w-3/4 px-3 py-2 border border-blue-400 rounded-full"
+/>
+
           </div>
         </div>
 
@@ -613,6 +711,26 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
             />
           </div>
         </div>
+
+        <div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Weekly Offs
+  </label>
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+    {daysOfWeek.map((d) => (
+      <label key={d.value} className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          checked={weeklyOffs.includes(d.value)}
+          onChange={() => toggleDay(d.value)}
+          className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+        />
+        <span>{d.label}</span>
+      </label>
+    ))}
+  </div>
+</div>
+
 
         {/* Enable Portal Access Checkbox */}
         <div className="flex items-start space-x-2 mt-3">

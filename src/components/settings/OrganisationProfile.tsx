@@ -167,47 +167,52 @@ const OrganisationProfile: React.FC = () => {
 
 
   const handleSave = async () => {
-    setLoading(true);
-    const uploadedLogoUrl = await uploadLogo();
+  if (!orgName.trim()) {
+    alert("Organisation name cannot be empty!");
+    return; // Stop further execution
+  }
 
-    const companyId = userData?.company_id;
-    if (!companyId) {
-      alert("No company linked to this user!");
-      setLoading(false);
-      return;
-    }
+  setLoading(true);
+  const uploadedLogoUrl = await uploadLogo();
 
-    const { error } = await supabase
-      .from("companies")
-      .update({
-        name: orgName,
-        logo_url: uploadedLogoUrl || logoUrl,
-        industry,
-        business_location: businessLocation,
-        date_format: dateFormat,
-        field_separator: fieldSeparator,
-        location_id: companyLocationId,
-        email: companyEmail,
-        number: companyNumber,
-      })
-      .eq("id", companyId);
-
-
-    if (error) {
-      console.error("Save failed:", error);
-      alert("Save failed, please check console");
-    } else {
-      alert("Saved successfully!");
-      setLogoUrl(uploadedLogoUrl || logoUrl);
-      dispatch(setCompany({
-        id: companyId,
-        name: orgName,
-        logo_url: uploadedLogoUrl || logoUrl,
-      }));
-    }
-
+  const companyId = userData?.company_id;
+  if (!companyId) {
+    alert("No company linked to this user!");
     setLoading(false);
-  };
+    return;
+  }
+
+  const { error } = await supabase
+    .from("companies")
+    .update({
+      name: orgName,
+      logo_url: uploadedLogoUrl || logoUrl,
+      industry,
+      business_location: businessLocation,
+      date_format: dateFormat,
+      field_separator: fieldSeparator,
+      location_id: companyLocationId,
+      email: companyEmail,
+      number: companyNumber,
+    })
+    .eq("id", companyId);
+
+  if (error) {
+    console.error("Save failed:", error);
+    alert("Save failed, please check console");
+  } else {
+    alert("Saved successfully!");
+    setLogoUrl(uploadedLogoUrl || logoUrl);
+    dispatch(setCompany({
+      id: companyId,
+      name: orgName,
+      logo_url: uploadedLogoUrl || logoUrl,
+    }));
+  }
+
+  setLoading(false);
+};
+
 
   return (
     <div className="bg-white shadow rounded-lg p-6 space-y-6">
@@ -324,8 +329,8 @@ const OrganisationProfile: React.FC = () => {
             onChange={(e) => setDateFormat(e.target.value)}
             className="mt-1 p-2 border rounded w-full border-blue-300"
           >
-            <option value="dd/MM/yyyy">dd/MM/yyyy</option>
-            <option value="MM/dd/yyyy">MM/dd/yyyy</option>
+            <option value="dd/MM/yyyy">dd/mm/yyyy</option>
+            <option value="MM/dd/yyyy">mm/dd/yyyy</option>
           </select>
         </div>
         <div>

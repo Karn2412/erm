@@ -24,6 +24,7 @@ export interface AttendanceRecord {
 
   request_type?: string | null;
   request_status?: string | null;
+  
   attendance_statuses?: string[] | null;
 
   // optional friendly objects (your monthly view uses them)
@@ -31,4 +32,5 @@ export interface AttendanceRecord {
   checkOutLocation?: LatLong | null;
 
   status?: string;
+  weekly_offs?: number[]; // optional weekly offs array
 }

@@ -174,7 +174,7 @@ useEffect(() => {
             />
           )}
           <h1 className="text-xl font-bold text-blue-600">
-            {company?.name || "Loading..."}
+            {company?.name || ""}
           </h1>
         </div>
 

@@ -17,6 +17,13 @@ const EmployeeModal = ({
 
   const [workHours, setWorkHours] = useState<any>(null);
   const [assets, setAssets] = useState<any[]>([]);
+  const [weeklyOffs, setWeeklyOffs] = useState<number[]>([]);
+const [weeklyOffsDetails, setWeeklyOffsDetails] = useState<any>(null);
+
+const [weeklyOffsNote, setWeeklyOffsNote] = useState("");
+
+
+
   console.log(assets);
 
   const [form, setForm] = useState({
@@ -171,6 +178,22 @@ const EmployeeModal = ({
           .maybeSingle();
 
         setWorkHours(whData);
+
+
+        const { data: weeklyOffsData, error: weeklyOffsError } = await supabase
+  .from("user_weekly_offs")
+  .select("weekly_offs, description, updated_at")
+  .eq("user_id", employee.id)
+  .maybeSingle();
+
+if (weeklyOffsError) {
+  console.error("Error fetching weekly offs:", weeklyOffsError.message);
+}
+if (weeklyOffsData) {
+  setWeeklyOffs(weeklyOffsData.weekly_offs || []);
+  setWeeklyOffsDetails(weeklyOffsData);
+}
+
 
         // Get current allocations for this user (only active — returned_on null)
         const { data: assetData, error } = await supabase
@@ -460,6 +483,22 @@ const EmployeeModal = ({
 
         somethingChanged = true;
       }
+      // Save/Update weekly offs
+const { error: weeklyOffsError } = await supabase.from("user_weekly_offs").upsert(
+  {
+    user_id: employee.id,
+    company_id: employee.company_id,
+    weekly_offs: weeklyOffs,
+    description: weeklyOffsNote || null,
+    updated_at: new Date(),
+  },
+  { onConflict: "user_id" }
+);
+
+if (weeklyOffsError) {
+  console.error("Error updating weekly offs:", weeklyOffsError.message);
+}
+
 
       // Insert salary
       if (salaryAmount) {
@@ -676,12 +715,69 @@ const handleRemoveAsset = async (assetId: string) => {
             <b>Last Updated:</b> {workHours ? new Date(workHours.created_at).toLocaleDateString() : "-"}
           </p>
 
+          {/* Current Weekly Offs */}
+<h3 className="text-lg font-semibold text-gray-800 mb-2">Weekly Offs</h3>
+{weeklyOffsDetails ? (
+  <div className="text-gray-700 text-sm bg-green-50 p-3 rounded-lg mb-6">
+    <b>Days Off:</b>{" "}
+    {weeklyOffs
+      .map((d) =>
+        ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d]
+      )
+      .join(", ")}
+    <br />
+    <b>Description:</b> {weeklyOffsDetails.description || "-"} <br />
+    <b>Last Updated:</b>{" "}
+    {weeklyOffsDetails.updated_at
+      ? new Date(weeklyOffsDetails.updated_at).toLocaleDateString()
+      : "-"}
+  </div>
+) : (
+  <p className="text-gray-500 text-sm mb-6">No weekly offs set</p>
+)}
+
+
           {/* Update Working Hours */}
           <h3 className="text-lg font-semibold text-gray-800 mb-3">Update Working Hours</h3>
           <div className="grid grid-cols-2 gap-4 mb-8">
             <input type="time" value={workStart} onChange={(e) => setWorkStart(e.target.value)} className="p-3 border border-blue-300 rounded-full focus:ring-2 focus:ring-blue-400" />
             <input type="time" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} className="p-3 border border-blue-300 rounded-full focus:ring-2 focus:ring-blue-400" />
           </div>
+
+
+          {/* Weekly Offs Section */}
+<h3 className="text-lg font-semibold text-gray-800 mb-2">Weekly Offs</h3>
+
+<div className="mb-4">
+  <div className="grid grid-cols-2 gap-2">
+    {["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"].map(
+      (day, index) => (
+        <label key={index} className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            checked={weeklyOffs.includes(index)}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setWeeklyOffs([...weeklyOffs, index]);
+              } else {
+                setWeeklyOffs(weeklyOffs.filter((d) => d !== index));
+              }
+            }}
+          />
+          <span>{day}</span>
+        </label>
+      )
+    )}
+  </div>
+
+  <textarea
+    className="mt-3 w-full border rounded-md p-2 text-sm"
+    placeholder="Add description (optional)"
+    value={weeklyOffsNote}
+    onChange={(e) => setWeeklyOffsNote(e.target.value)}
+  />
+</div>
+
 
           {/* Salary */}
           <h3 className="text-lg font-semibold text-gray-800 mb-3">Salary Details</h3>

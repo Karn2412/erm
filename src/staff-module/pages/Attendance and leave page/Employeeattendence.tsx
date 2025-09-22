@@ -7,9 +7,10 @@ import TimeTrackerCard from '../../components/dashboard/Timetrackercard'
 import AttendanceWeeklyTable from '../../components/Attendence and leave/AttendanceWeeklyTable'
 import { supabase } from '../../../supabaseClient'
 import { useUser } from '../../../context/UserContext'
-import { format, endOfMonth, addDays, isAfter } from 'date-fns'
+import { format, } from 'date-fns'
 import { FaMapMarkerAlt } from 'react-icons/fa'
 import type { AttendanceRecord } from '../../../types/attendance'
+
 
 
 
@@ -40,16 +41,13 @@ const EmployeeAttendancePage = () => {
   const [regularizeDate, setRegularizeDate] = useState<string | null>(null);
   const [leaveDate, setLeaveDate] = useState<string | null>(null);  // IGNORE
   const [wfhDate, setWFHDate] = useState<string | null>(null);  // IGNORE
-  const [approvedOffDate, setApprovedOffDate] = useState<string | null>(null);  // IGNORE
+  const [approvedOffDate, setApprovedOffDate] = useState<string | null>(null); 
+  
+  // IGNORE
 
-  console.log(regularizeDate, leaveDate, wfhDate, approvedOffDate);
+  console.log(setSelectedMonth,setSelectedYear, regularizeDate, leaveDate, wfhDate, approvedOffDate);
   
 
-  const approvedOffDates = new Set<string>();
-  console.log(regularizeDate);
-  console.log(setSelectedMonth);
-  console.log(setSelectedYear);
-  
   
   //
   const getColorBorder = (status: string) => {
@@ -59,7 +57,7 @@ const EmployeeAttendancePage = () => {
       case 'Absent': return 'border-red-500';
       case 'Regularize': return 'border-orange-300';
       case 'Regularized': return 'border-orange-300';
-      case 'Approved Off': return 'border-blue-500';
+      case 'Weekly Off': return 'border-blue-500';
       case 'Approved Leave': return 'border-indigo-500';
       case 'Work From Home': return 'border-purple-500';
       case 'Request Sent': return 'border-yellow-400';
@@ -74,7 +72,7 @@ const EmployeeAttendancePage = () => {
       case 'Absent': return 'bg-red-500';
       case 'Regularize': return 'bg-orange-400';
       case 'Regularized': return 'bg-orange-400';
-      case 'Approved Off': return 'bg-blue-500';
+      case 'Weekly Off': return 'bg-blue-500';
       case 'Approved Leave': return 'bg-indigo-500';
       case 'Work From Home': return 'bg-purple-500';
       case 'Incomplete': return 'bg-gray-400';
@@ -85,235 +83,100 @@ const EmployeeAttendancePage = () => {
   };
 
   useEffect(() => {
-    if (!userId) return;
+  const fetchAttendance = async () => {
+    setLoading(true);
 
-    const fetchAttendance = async () => {
-      setLoading(true);
+    // 1️⃣ Fetch attendance summary for user in selected month/year
+    const startDate = new Date(selectedYear, selectedMonth, 1);
+    const endDate = new Date(selectedYear, selectedMonth + 1, 0);
 
-      const startDate = format(new Date(selectedYear, selectedMonth, 1), 'yyyy-MM-dd');
-      const endDate = format(endOfMonth(new Date(selectedYear, selectedMonth)), 'yyyy-MM-dd');
+    const { data: attendanceSummary, error } = await supabase
+      .from("employee_attendance_summary")
+      .select("*")
+      .eq("user_id", userId)
+      .gte("attendance_date", startDate.toISOString())
+      .lte("attendance_date", endDate.toISOString())
+      
+      console.log("Attendance Summary:", attendanceSummary);
+      
+    if (error) {
+      console.error("Error fetching attendance:", error);
+      setLoading(false);
+      return;
+    }
 
-      const { data: summary } = await supabase
-        .from('employee_attendance_summary')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('attendance_date', startDate)
-        .lte('attendance_date', endDate)
-        .order('attendance_date', { ascending: true });
+    // 2️⃣ Fetch user weekly offs
+    const { data: weeklyOff } = await supabase
+      .from("user_weekly_offs")
+      .select("weekly_offs")
+      .eq("user_id", userId)
+      .single();
+      
+    const weeklyOffDays: number[] = weeklyOff?.weekly_offs || []; // e.g. [0,6] → Sun & Sat
 
-      const { data: approvedRequests } = await supabase
-        .from('attendance_requests')
-        .select('request_type, status, start_date, end_date')
-        .eq('user_id', userId)
-        .eq('status', 'APPROVED')
-        .in('request_type', ['LEAVE', 'WFH', 'APPROVED OFF'])
-        .lte('start_date', endDate)
-        .gte('end_date', startDate);
+    // 3️⃣ Transform into calendar data
+    const transformed: AttendanceRecord[] = [];
+    const daysInMonth = endDate.getDate();
 
-      const leaveDates = new Set<string>();
-      const wfhDates = new Set<string>();
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDate = new Date(selectedYear, selectedMonth, day);
+      const formattedDate = currentDate.toISOString().split("T")[0];
+      const weekday = currentDate.toLocaleDateString("en-US", { weekday: "short" });
+      const weekDayIndex = currentDate.getDay(); // 0=Sun ... 6=Sat
 
-      if (approvedRequests?.length) {
-        for (const r of approvedRequests) {
-          const s = new Date(r.start_date as string);
-          const e = new Date(r.end_date as string);
-          for (let d = s; !isAfter(d, e); d = addDays(d, 1)) {
-            const dayStr = format(d, 'yyyy-MM-dd');
-            if (r.request_type === 'LEAVE') leaveDates.add(dayStr);
-            if (r.request_type === 'WFH') wfhDates.add(dayStr);
-            if (r.request_type === 'APPROVED OFF') approvedOffDates.add(dayStr);
-          }
-        }
+      const dbEntry = attendanceSummary?.find((a) => a.attendance_date === formattedDate);
+      const worked = dbEntry?.total_hours || 0;
+      const expected = dbEntry?.expected_hours || 0;
+      const isFuture = currentDate > new Date();
+      const isWeeklyOff = weeklyOffDays.includes(weekDayIndex);
+
+      let status: string = "Upcoming"; // Default value
+
+      // ✅ Priority order
+      if (isWeeklyOff) {
+        status = "Weekly Off";
+      } else if (dbEntry?.request_type && dbEntry.request_status === "APPROVED") {
+        if (dbEntry.request_type === "LEAVE") status = "Approved Leave";
+        if (dbEntry.request_type === "WFH") status = "Work From Home";
+        if (dbEntry.request_type === "APPROVED OFF") status = "Approved Off";
+      } else if (dbEntry?.attendance_statuses?.[0] === "Regularized") {
+        status = "Regularized";
+      } else if (expected > 0 && worked + 0.01 < expected) {
+        status = dbEntry?.first_check_in_time ? "Regularize" : "Absent";
+      } else if (dbEntry?.attendance_statuses?.[0]) {
+        status = dbEntry.attendance_statuses[0];
+      } else {
+        // Fallback
+        status = isFuture ? "Upcoming" : "Absent";
       }
 
-      const transformed: AttendanceRecord[] = [];
-      const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-
-      for (let day = 1; day <= daysInMonth; day++) {
-        const dateObj = new Date(selectedYear, selectedMonth, day);
-        const formattedDate = format(dateObj, 'yyyy-MM-dd');
-        const weekday = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
-        const isWeekend = weekday === 'Saturday' || weekday === 'Sunday';
-        const isFuture = dateObj > today;
-
-        const dbEntry = summary?.find((entry) => entry.attendance_date === formattedDate);
-
-       if (leaveDates.has(formattedDate)) {
-  transformed.push({
-    day: weekday,
-    date: formattedDate,
-    hoursWorked: dbEntry?.total_worked_hours?.toFixed(2) ?? '0.00',
-    expectedHours: dbEntry?.expected_hours?.toFixed(2) ?? '0.00',
-     status: 'Approved Leave',   // match admin side
-
-    // raw fields (required by type) — set null when absent
-    first_check_in_time: dbEntry?.first_check_in_time ?? null,
-    last_check_out_time: dbEntry?.last_check_out_time ?? null,
-    check_in_latitudes: dbEntry?.check_in_latitudes ?? null,
-    check_in_longitudes: dbEntry?.check_in_longitudes ?? null,
-    check_out_latitudes: dbEntry?.check_out_latitudes ?? null,
-    check_out_longitudes: dbEntry?.check_out_longitudes ?? null,
-    attendance_statuses: dbEntry?.attendance_statuses ?? null,
-    request_type: dbEntry?.request_type ?? null,
-    request_status: dbEntry?.request_status ?? null,
-
-    // friendly objects you also use elsewhere
-    checkInLocation: null,
-    checkOutLocation: null,
-  } as AttendanceRecord);
-  continue;
-}
-
-if (wfhDates.has(formattedDate)) {
-  transformed.push({
-    day: weekday,
-    date: formattedDate,
-    hoursWorked: dbEntry?.total_worked_hours?.toFixed(2) ?? '0.00',
-    expectedHours: dbEntry?.expected_hours?.toFixed(2) ?? '0.00',
-    status: 'Work From Home',
-    first_check_in_time: dbEntry?.first_check_in_time ?? null,
-    last_check_out_time: dbEntry?.last_check_out_time ?? null,
-    check_in_latitudes: dbEntry?.check_in_latitudes ?? null,
-    check_in_longitudes: dbEntry?.check_in_longitudes ?? null,
-    check_out_latitudes: dbEntry?.check_out_latitudes ?? null,
-    check_out_longitudes: dbEntry?.check_out_longitudes ?? null,
-    attendance_statuses: dbEntry?.attendance_statuses ?? null,
-    request_type: dbEntry?.request_type ?? null,
-    request_status: dbEntry?.request_status ?? null,
-
-    checkInLocation: null,
-    checkOutLocation: null,
-  } as AttendanceRecord);
-  continue;
-}
-if (approvedOffDates.has(formattedDate)) {
-  transformed.push({
-    day: weekday,
-    date: formattedDate,
-    hoursWorked: dbEntry?.total_worked_hours?.toFixed(2) ?? '0.00',
-    expectedHours: dbEntry?.expected_hours?.toFixed(2) ?? '0.00',
-    status: 'Approved Off',
-    first_check_in_time: dbEntry?.first_check_in_time ?? null,
-    last_check_out_time: dbEntry?.last_check_out_time ?? null,
-    check_in_latitudes: dbEntry?.check_in_latitudes ?? null,
-    check_in_longitudes: dbEntry?.check_in_longitudes ?? null,
-    check_out_latitudes: dbEntry?.check_out_latitudes ?? null,
-    check_out_longitudes: dbEntry?.check_out_longitudes ?? null,
-    attendance_statuses: dbEntry?.attendance_statuses ?? null,
-    request_type: dbEntry?.request_type ?? null,
-    request_status: dbEntry?.request_status ?? null,
-    checkInLocation: null,
-    checkOutLocation: null,
-  } as AttendanceRecord);
-  continue;
-}
-
-
-
-if (dbEntry) {
-  const worked = Number(dbEntry.total_worked_hours ?? 0);
-  const expected = Number(dbEntry.expected_hours ?? 0);
-
-  // ✅ Trust backend first
-// ✅ Trust backend first
-let status: string = dbEntry.attendance_statuses?.[0] || "Absent";
-
-// If backend already says "Regularized", keep it
-if (status !== "Regularized") {
-  const underHours = !isWeekend && !isFuture && expected > 0 && worked + 0.01 < expected;
-
-  if (underHours) {
-    if (dbEntry.first_check_in_time) {
-      status = "Regularize"; // pending employee action
-    } else {
-      status = "Absent"; // no check-in
+      transformed.push({
+        day: weekday,
+        date: formattedDate,
+        hoursWorked: worked.toFixed(2),
+        expectedHours: expected.toFixed(2),
+        status,
+        first_check_in_time: dbEntry?.first_check_in_time || null,
+        last_check_out_time: dbEntry?.last_check_out_time || null,
+        check_in_latitudes: dbEntry?.check_in_latitudes || null,
+        check_in_longitudes: dbEntry?.check_in_longitudes || null,
+        check_out_latitudes: dbEntry?.check_out_latitudes || null,
+        check_out_longitudes: dbEntry?.check_out_longitudes || null,
+        attendance_statuses: dbEntry?.attendance_statuses || null,
+        request_type: dbEntry?.request_type || null,
+        request_status: dbEntry?.request_status || null,
+        checkInLocation: dbEntry?.checkInLocation || null,
+        checkOutLocation: dbEntry?.checkOutLocation || null,
+      } as AttendanceRecord);
     }
-  }
-}
 
-
-  // (rest of your record construction remains unchanged)
-  const record: AttendanceRecord = {
-    day: weekday,
-    date: dbEntry.attendance_date,
-    attendance_date: dbEntry.attendance_date,
-    hoursWorked: worked.toFixed(2),
-    expectedHours: expected.toFixed(2),
-    first_check_in_time: dbEntry.first_check_in_time ?? null,
-    last_check_out_time: dbEntry.last_check_out_time ?? null,
-    check_in_latitudes: dbEntry.check_in_latitudes ?? null,
-    check_in_longitudes: dbEntry.check_in_longitudes ?? null,
-    check_out_latitudes: dbEntry.check_out_latitudes ?? null,
-    check_out_longitudes: dbEntry.check_out_longitudes ?? null,
-    attendance_statuses: dbEntry.attendance_statuses ?? null,
-    request_type: dbEntry.request_type ?? null,
-    request_status: dbEntry.request_status ?? null,
-    checkInLocation: dbEntry.first_check_in_time
-      ? {
-          lat: dbEntry.check_in_latitudes?.[0] ?? null,
-          long: dbEntry.check_in_longitudes?.[0] ?? null,
-          time: new Date(dbEntry.first_check_in_time).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        }
-      : null,
-    checkOutLocation: dbEntry.last_check_out_time
-      ? {
-          lat:
-            (dbEntry.check_out_latitudes?.length ?? 0) > 0
-              ? dbEntry.check_out_latitudes?.slice(-1)[0] ?? null
-              : null,
-          long:
-            (dbEntry.check_out_longitudes?.length ?? 0) > 0
-              ? dbEntry.check_out_longitudes?.slice(-1)[0] ?? null
-              : null,
-          time: new Date(dbEntry.last_check_out_time).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        }
-      : null,
-    status,
+    setAttendanceData(transformed);
+    setLoading(false);
   };
 
-  transformed.push(record);
-} else {
-  // ✅ Fallback when no dbEntry at all
-  const status = isFuture
-    ? "Upcoming"
-    : isWeekend
-    ? "Approved Off"
-    : "Absent";
+  fetchAttendance();
+}, [userId, selectedMonth, selectedYear]);
 
-  transformed.push({
-    day: weekday,
-    date: formattedDate,
-    hoursWorked: "0.00",
-    expectedHours: "0.00",
-    status,
-    first_check_in_time: null,
-    last_check_out_time: null,
-    check_in_latitudes: null,
-    check_in_longitudes: null,
-    check_out_latitudes: null,
-    check_out_longitudes: null,
-    attendance_statuses: null,
-    request_type: null,
-    request_status: null,
-    checkInLocation: null,
-    checkOutLocation: null,
-  } as AttendanceRecord);
-}
-
-      }
-
-      setAttendanceData(transformed);
-      setLoading(false);
-    };
-
-    fetchAttendance();
-  }, [userId, selectedMonth, selectedYear]);
 
   useEffect(() => {
     if (!userId) return;
@@ -396,7 +259,7 @@ if (status !== "Regularized") {
         { color: "green-500", label: "Checked In" },
         { color: "red-500", label: "Absent" },
         { color: "yellow-500", label: "Regularization" },
-        { color: "blue-500", label: "Approved Off" },
+        { color: "blue-500", label: "Weekly Off" },
       ].map(({ color, label }, idx) => (
         <div key={idx} className="flex items-center gap-x-2">
           <span className={`w-3 h-3 rounded-full bg-${color}`}></span>
@@ -467,7 +330,7 @@ if (found) {
   if (found.request_type && found.request_status === "APPROVED") {
     if (found.request_type === "LEAVE") status = "Approved Leave";
     if (found.request_type === "WFH") status = "Work From Home";
-    if (found.request_type === "APPROVED OFF") status = "Approved Off";
+    if (found.request_type === "WEEKLY OFF") status = "Weekly Off";
   }
 
   // ✅ Pending Regularization override
@@ -483,10 +346,10 @@ if (found) {
   if (isFuture && !found.status) {
     status = "Incomplete"; // Future no record → Incomplete
   }
-} else {
-  // ✅ No record fallback
-  status = isWeekend ? "Approved Off" : isFuture ? "Upcoming" : "Absent";
-}
+    } else {
+      // ✅ No record fallback
+      status = isWeekend ? "Weekly Off" : isFuture ? "Upcoming" : "Absent";
+    }
 
 
 

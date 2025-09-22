@@ -45,7 +45,7 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
         return "border-purple-500";
       case "Approved Leave":
         return "border-teal-500";
-      case "Approved Off":
+      case "Weekly Off":
         return "border-blue-500";
       case "Incomplete":
         return "border-gray-300";
@@ -70,7 +70,7 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
         return "bg-purple-500";
       case "Approved Leave":
         return "bg-teal-500";
-      case "Approved Off":
+      case "Weekly Off":
         return "bg-blue-500";
       case "Incomplete":
         return "bg-gray-300";
@@ -82,6 +82,28 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
         return "bg-gray-300";
     }
   };
+
+  const [weeklyOffs, setWeeklyOffs] = useState<number[]>([]);
+
+useEffect(() => {
+  if (!userId) return;
+
+  const fetchWeeklyOffs = async () => {
+    const { data, error } = await supabase
+      .from("user_weekly_offs")
+      .select("weekly_offs")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching weekly offs:", error);
+    } else if (data?.weekly_offs) {
+      setWeeklyOffs(data.weekly_offs); // e.g. [0,6] for Sunday & Saturday
+    }
+  };
+
+  fetchWeeklyOffs();
+}, [userId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -181,6 +203,12 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
 
           // ✅ Trust backend
           let status: string;
+
+if (weeklyOffs.includes(dateObj.getDay())) {
+  // ✅ User’s weekly off
+  status = "Weekly Off";
+
+} else
 
 if (dbEntry?.request_type && dbEntry?.request_status === "PENDING") {
   // ✅ Pending request explicitly

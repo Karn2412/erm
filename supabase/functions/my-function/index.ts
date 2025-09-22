@@ -66,9 +66,8 @@ serve(async (req) => {
     const { email, password, name, number, role_name, gender_id, department_id, designation_id, work_location } = body;
 
     if (!designation_id) {
-  return withCors(new Response(JSON.stringify({ error: "designation_id is required" }), { status: 400 }));
-}
-
+      return withCors(new Response(JSON.stringify({ error: "designation_id is required" }), { status: 400 }));
+    }
 
     // Validate fields
     if (!email || !password || !name || !number) {
@@ -84,52 +83,61 @@ serve(async (req) => {
     }
 
     if (!work_location) {
-  return withCors(new Response(JSON.stringify({ error: "work_location is required" }), { status: 400 }));
-}
+      return withCors(new Response(JSON.stringify({ error: "work_location is required" }), { status: 400 }));
+    }
 
+    // ✅ Check if work_location belongs to same company
+    const { data: locationData, error: locationError } = await supabase
+      .from("work_locations")
+      .select("id, company_id")
+      .eq("id", work_location)
+      .single();
 
-// ✅ Check if work_location belongs to same company
-const { data: locationData, error: locationError } = await supabase
-  .from("work_locations")
-  .select("id, company_id")
-  .eq("id", work_location)
-  .single();
+    if (locationError || !locationData) {
+      return withCors(new Response(JSON.stringify({ error: "Invalid work_location", details: locationError?.message }), { status: 400 }));
+    }
 
-if (locationError || !locationData) {
-  return withCors(new Response(JSON.stringify({ error: "Invalid work_location", details: locationError?.message }), { status: 400 }));
-}
+    if (locationData.company_id !== adminCompanyId) {
+      return withCors(new Response(JSON.stringify({ error: "Location does not belong to your company" }), { status: 403 }));
+    }
 
-if (locationData.company_id !== adminCompanyId) {
-  return withCors(new Response(JSON.stringify({ error: "Location does not belong to your company" }), { status: 403 }));
-}
+    // ✅ Count current active users in the company
+    const { data: activeUsersData, error: activeUsersError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("company_id", adminCompanyId)
+      .eq("is_active", true);
 
+    if (activeUsersError) {
+      return withCors(new Response(JSON.stringify({ error: "Failed to fetch active users", details: activeUsersError.message }), { status: 500 }));
+    }
 
-// ✅ Count current active users in the company
-const { data: activeUsersData, error: activeUsersError } = await supabase
-  .from("users")
-  .select("id")
-  .eq("company_id", adminCompanyId)
-  .eq("is_active", true);
+    // ✅ Fetch company's max_active_members
+    const { data: companyData, error: companyError } = await supabase
+      .from("companies")
+      .select("max_active_members")
+      .eq("id", adminCompanyId)
+      .single();
 
-if (activeUsersError) {
-  return withCors(new Response(JSON.stringify({ error: "Failed to fetch active users", details: activeUsersError.message }), { status: 500 }));
-}
+    if (companyError || !companyData) {
+      return withCors(new Response(JSON.stringify({ error: "Failed to fetch company data", details: companyError?.message }), { status: 500 }));
+    }
 
-// ✅ Fetch company's max_active_members
-const { data: companyData, error: companyError } = await supabase
-  .from("companies")
-  .select("max_active_members")
-  .eq("id", adminCompanyId)
-  .single();
+    // ✅ Check if adding a new user exceeds max limit
+    if (activeUsersData.length >= companyData.max_active_members) {
+      return withCors(new Response(JSON.stringify({ error: `Cannot add more users. Maximum active users limit (${companyData.max_active_members}) reached.` }), { status: 403 }));
+    }
 
-if (companyError || !companyData) {
-  return withCors(new Response(JSON.stringify({ error: "Failed to fetch company data", details: companyError?.message }), { status: 500 }));
-}
+    // ✅ Check if email already exists
+    const { data: allUsers, error: listError } = await supabase.auth.admin.listUsers();
+    if (listError) {
+      return withCors(new Response(JSON.stringify({ error: "Failed to check email existence", details: listError.message }), { status: 500 }));
+    }
 
-// ✅ Check if adding a new user exceeds max limit
-if (activeUsersData.length >= companyData.max_active_members) {
-  return withCors(new Response(JSON.stringify({ error: `Cannot add more users. Maximum active users limit (${companyData.max_active_members}) reached.` }), { status: 403 }));
-}
+    const exists = allUsers.users.some((u) => u.email === email);
+    if (exists) {
+      return withCors(new Response(JSON.stringify({ error: "Email already exists" }), { status: 400 }));
+    }
 
     // ✅ Create Auth User
     const { data: userData, error: userError } = await supabase.auth.admin.createUser({
@@ -163,6 +171,27 @@ if (activeUsersData.length >= companyData.max_active_members) {
       console.error("Insert Error:", insertError);
       return withCors(new Response(JSON.stringify({ error: "User insert failed", details: insertError.message }), { status: 500 }));
     }
+
+// ✅ Insert/Update weekly offs if provided
+if (body.weekly_offs && Array.isArray(body.weekly_offs)) {
+  const { error: offsError } = await supabase
+    .from("user_weekly_offs")
+    .upsert(
+      {
+        user_id: newUserId,
+        company_id: adminCompanyId,
+        weekly_offs: body.weekly_offs,
+        description: "Approved weekly offs", // or frontend custom
+      },
+      { onConflict: "user_id" } // 👈 ensures one row per user
+    );
+
+  if (offsError) {
+    console.error("Weekly Offs Upsert Error:", offsError);
+  }
+}
+
+
 
     // ✅ Fetch the correct role_id (admin or staff)
     const selectedRole = role_name === "admin" ? "admin" : "staff";
