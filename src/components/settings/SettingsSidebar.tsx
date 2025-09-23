@@ -28,7 +28,7 @@ const menuItems = [
   { name: 'Salary Templates', icon: <FaFileAlt /> },
   { name: 'Taxes', icon: <FaPercentage /> },
   { name: 'Pay Schedule', icon: <FaCalendarAlt /> },
-  { name: 'Leave & Attendance', icon: <FaClock /> },
+  { name: 'Leave Types', icon: <FaClock /> }, 
   { name: 'Assets', icon: <FaLaptop /> }, // ✅ Added
 ];
 

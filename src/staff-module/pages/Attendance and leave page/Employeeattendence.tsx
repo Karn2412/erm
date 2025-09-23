@@ -58,7 +58,7 @@ const EmployeeAttendancePage = () => {
       case 'Regularize': return 'border-orange-300';
       case 'Regularized': return 'border-orange-300';
       case 'Weekly Off': return 'border-blue-500';
-      case 'Approved Leave': return 'border-indigo-500';
+      
       case 'Work From Home': return 'border-purple-500';
       case 'Request Sent': return 'border-yellow-400';
       default: return 'border-gray-300';
@@ -73,7 +73,7 @@ const EmployeeAttendancePage = () => {
       case 'Regularize': return 'bg-orange-400';
       case 'Regularized': return 'bg-orange-400';
       case 'Weekly Off': return 'bg-blue-500';
-      case 'Approved Leave': return 'bg-indigo-500';
+      
       case 'Work From Home': return 'bg-purple-500';
       case 'Incomplete': return 'bg-gray-400';
       case 'Request Sent': return 'bg-yellow-400';
@@ -325,10 +325,13 @@ const EmployeeAttendancePage = () => {
 
                         // ✅ Override based on requests if APPROVED
                         if (found.request_type && found.request_status === "APPROVED") {
-                          if (found.request_type === "LEAVE") status = "Approved Leave";
+                          if (found.request_type === "LEAVE") status = `${found.attendance_statuses
+ || "Approved Leave"} `;
                           if (found.request_type === "WFH") status = "Work From Home";
                           if (found.request_type === "WEEKLY OFF") status = "Weekly Off";
+                          console.log("Found entry:", found, "Resolved status:", status);
                         }
+                        
 
                         // ✅ Pending Regularization override
                         // ✅ NEW: Override if there’s a PENDING regularization
@@ -440,9 +443,20 @@ const EmployeeAttendancePage = () => {
           </div> */}
 
                           {/* Status footer */}
-                          <div className={`text-[13px] rounded-b-xl font-semibold text-white text-center py-1 ${getColorBg(status)}`}>
-                            {status}
-                          </div>
+<div
+  className={`text-[13px] rounded-b-xl font-semibold text-white text-center py-1 ${
+    !(found?.request_type === "LEAVE" && found?.leaveColor) ? getColorBg(status) : ""
+  }`}
+  style={{
+    backgroundColor:
+      found?.request_type === "LEAVE" && found?.leaveColor
+        ? found.leaveColor
+        : undefined,
+  }}
+>
+  {status}
+</div>
+
                         </div>
                       );
                     }

@@ -17,6 +17,7 @@ interface AttendanceRecord {
   requestType?: string;
   requestStatus?: string;
   isFuture?: boolean;
+  leaveColor?: string; // ✅ new
 }
 
 const EmployeeAttendanceDetailPage: React.FC = () => {
@@ -43,7 +44,7 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
         return "border-orange-400";
       case "Work From Home":
         return "border-purple-500";
-      case "Approved Leave":
+      case "Paid Leave":
         return "border-teal-500";
       case "Weekly Off":
         return "border-blue-500";
@@ -68,7 +69,7 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
         return "bg-orange-400";
       case "Work From Home":
         return "bg-purple-500";
-      case "Approved Leave":
+      case "Paid Leave":
         return "bg-teal-500";
       case "Weekly Off":
         return "bg-blue-500";
@@ -85,25 +86,25 @@ const EmployeeAttendanceDetailPage: React.FC = () => {
 
   const [weeklyOffs, setWeeklyOffs] = useState<number[]>([]);
 
-useEffect(() => {
-  if (!userId) return;
+  useEffect(() => {
+    if (!userId) return;
 
-  const fetchWeeklyOffs = async () => {
-    const { data, error } = await supabase
-      .from("user_weekly_offs")
-      .select("weekly_offs")
-      .eq("user_id", userId)
-      .maybeSingle();
+    const fetchWeeklyOffs = async () => {
+      const { data, error } = await supabase
+        .from("user_weekly_offs")
+        .select("weekly_offs")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-    if (error) {
-      console.error("Error fetching weekly offs:", error);
-    } else if (data?.weekly_offs) {
-      setWeeklyOffs(data.weekly_offs); // e.g. [0,6] for Sunday & Saturday
-    }
-  };
+      if (error) {
+        console.error("Error fetching weekly offs:", error);
+      } else if (data?.weekly_offs) {
+        setWeeklyOffs(data.weekly_offs); // e.g. [0,6] for Sunday & Saturday
+      }
+    };
 
-  fetchWeeklyOffs();
-}, [userId]);
+    fetchWeeklyOffs();
+  }, [userId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -204,27 +205,27 @@ useEffect(() => {
           // ✅ Trust backend
           let status: string;
 
-if (weeklyOffs.includes(dateObj.getDay())) {
-  // ✅ User’s weekly off
-  status = "Weekly Off";
+          if (weeklyOffs.includes(dateObj.getDay())) {
+            // ✅ User’s weekly off
+            status = "Weekly Off";
 
-} else
+          } else
 
-if (dbEntry?.request_type && dbEntry?.request_status === "PENDING") {
-  // ✅ Pending request explicitly
-  status = "Pending Request";
-} else if (
-  Array.isArray(dbEntry?.attendance_statuses) &&
-  dbEntry.attendance_statuses.length > 0
-) {
-  status = dbEntry.attendance_statuses[0];
+            if (dbEntry?.request_type && dbEntry?.request_status === "PENDING") {
+              // ✅ Pending request explicitly
+              status = "Pending Request";
+            } else if (
+              Array.isArray(dbEntry?.attendance_statuses) &&
+              dbEntry.attendance_statuses.length > 0
+            ) {
+              status = dbEntry.attendance_statuses[0];
 
-  if (status === "Incomplete" && dateObj < today) {
-    status = "Absent"; // Past Incomplete → Absent
-  }
-} else {
-  status = isFuture ? "Incomplete" : "Absent";
-}
+              if (status === "Incomplete" && dateObj < today) {
+                status = "Absent"; // Past Incomplete → Absent
+              }
+            } else {
+              status = isFuture ? "Incomplete" : "Absent";
+            }
 
 
 
@@ -245,6 +246,7 @@ if (dbEntry?.request_type && dbEntry?.request_status === "PENDING") {
             requestType: dbEntry.request_type,
             requestStatus: dbEntry.request_status,
             isFuture,
+            leaveColor: dbEntry.leave_color || undefined,
           });
         } else {
           // ✅ No DB entry at all
@@ -337,11 +339,17 @@ if (dbEntry?.request_type && dbEntry?.request_status === "PENDING") {
                     </td>
                     <td className="py-2 px-3">
                       <div className="flex items-center space-x-1">
-                        <div
-                          className={`w-3 h-3 rounded-full ${getColorBg(
-                            item.status
-                          )}`}
-                        ></div>
+                      <div
+  className={`w-3 h-3 rounded-full ${
+    !(item.status?.includes("Leave") && item.leaveColor) ? getColorBg(item.status) : ""
+  }`}
+  style={{
+    backgroundColor:
+      item.status?.includes("Leave") && item.leaveColor
+        ? item.leaveColor
+        : undefined,
+  }}
+></div>
                         <span className="text-xs text-gray-600">
                           {item.hoursWorked} / {item.expectedHours}
                         </span>
@@ -363,14 +371,21 @@ if (dbEntry?.request_type && dbEntry?.request_status === "PENDING") {
                       )}
                     </td>
                     <td className="py-2 px-3">{item.hoursWorked}</td>
-                    <td className="py-2 px-3 rounded-r-lg">
-                      {item.status}
-                      {/* {item.requestType && item.requestStatus === "APPROVED" && (
-                        // <span className="ml-2 px-2 py-1 rounded bg-green-200 text-green-700 text-xs font-semibold">
-                        //   {item.requestType}
-                        // </span>
-                      )} */}
-                    </td>
+                  <td className="py-2 px-3 rounded-r-lg">
+  <span
+    className={`inline-block px-2 py-1 rounded text-xs font-semibold text-white ${
+      !(item.status?.includes("Leave") && item.leaveColor) ? getColorBg(item.status) : ""
+    }`}
+    style={{
+      backgroundColor:
+        item.status?.includes("Leave") && item.leaveColor
+          ? item.leaveColor
+          : undefined,
+    }}
+  >
+    {item.status}
+  </span>
+</td>
                   </tr>
                 ))}
               </tbody>
@@ -406,9 +421,9 @@ if (dbEntry?.request_type && dbEntry?.request_status === "PENDING") {
                     const found = attendanceData.find((d) => d.date === formatted);
 
                     let status = found?.status || "Incomplete";
-if (found?.requestType && found?.requestStatus === "PENDING") {
-  status = "Pending Request";
-}
+                    if (found?.requestType && found?.requestStatus === "PENDING") {
+                      status = "Pending Request";
+                    }
 
 
                     calendarDays.push(
@@ -439,12 +454,19 @@ if (found?.requestType && found?.requestStatus === "PENDING") {
 
                         {/* Status footer */}
                         <div
-                          className={`text-[13px] rounded-b-xl font-semibold text-white text-center py-1 ${getColorBg(
-                            status
-                          )}`}
+                          className={`text-[13px] rounded-b-xl font-semibold text-white text-center py-1 ${!(status.includes("Leave") && found?.leaveColor) ? getColorBg(status) : ""
+                            }`}
+                          style={{
+                            backgroundColor:
+                              status.includes("Leave") && found?.leaveColor
+                                ? found.leaveColor // ✅ custom leave color
+                                : undefined,
+                          }}
                         >
                           {status}
                         </div>
+
+
                       </div>
                     );
                   }

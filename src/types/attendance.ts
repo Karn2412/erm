@@ -33,4 +33,6 @@ export interface AttendanceRecord {
 
   status?: string;
   weekly_offs?: number[]; // optional weekly offs array
+  leaveColor?: string; // ✅ new
+  leave_name?: string; // ✅ new
 }

@@ -46,6 +46,7 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search, compan
             base_pay,
             deductions,
             reimbursements,
+            incentives,
             total_pay,
             month,
             company_id
@@ -54,7 +55,7 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search, compan
         if (companyId) query = query.eq("company_id", companyId);
 
         const { data: liveData, error: liveErr } = await query;
-
+        console.log("Fetched live payroll data:", liveData);
         if (liveErr) {
           console.error("❌ Live payroll error:", liveErr);
           return;
@@ -66,7 +67,7 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search, compan
           employee_name: item.employee_name,
           salary: item.monthly_ctc,
           deductions: item.deductions || 0,
-          incentives: 0,
+          incentives: item.incentives || 0,
           reimbursements: item.reimbursements || 0,
           total_pay: item.total_pay,
           source: "Live" as const,
@@ -81,6 +82,7 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search, compan
             month,
             monthly_ctc,
             base_pay,
+            incentives,
             deductions,
             reimbursements,
             total_pay,
@@ -103,7 +105,7 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search, compan
           employee_name: item.employee_name,
           salary: item.monthly_ctc,
           deductions: item.deductions || 0,
-          incentives: 0,
+          incentives: item.incentives || 0,
           reimbursements: item.reimbursements || 0,
           total_pay: item.total_pay,
           source: "History" as const,
@@ -193,6 +195,8 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search, compan
           </thead>
           <tbody>
             {payRunsData.map((item, index) => (
+
+              
               <tr key={`${item.user_id}-${selectedMonth}`} className="odd:bg-blue-50 even:bg-gray-50 hover:bg-gray-100 transition">
                 <td className="py-3 px-4 rounded-l-lg">{index + 1}</td>
                 <td className="py-3 px-4 font-medium text-gray-800">{item.employee_name}</td>

@@ -26,7 +26,14 @@ const LeaveRequestModal: React.FC<Props> = ({ onClose }) => {
   const [leaveTypes, setLeaveTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 🔹 Fetch duration & leave types dynamically
+  // 🔹 Helper to calculate total days between start_date and end_date
+  const calculateDays = (start: string, end: string) => {
+    const s = new Date(start);
+    const e = new Date(end);
+    return Math.floor((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  };
+
+  // 🔹 Fetch durations + leave types with balance check
   useEffect(() => {
     const fetchDurations = async () => {
       const { data, error } = await supabase
@@ -36,17 +43,81 @@ const LeaveRequestModal: React.FC<Props> = ({ onClose }) => {
       else setDurations(data || []);
     };
 
-    const fetchLeaveTypes = async () => {
-      const { data, error } = await supabase
+    const fetchLeaveTypesWithBalance = async () => {
+      const { data: leaveTypes, error } = await supabase
         .from("leave_types")
-        .select("id, leave_name");
-      if (error) console.error("Error fetching leave types:", error);
-      else setLeaveTypes(data || []);
+        .select("*")
+        .eq("company_id", userData.company_id);
+
+      if (error) {
+        console.error("Error fetching leave types:", error);
+        return;
+      }
+
+      // Check balance for each leave type
+      const balances = await Promise.all(
+        (leaveTypes || []).map(async (lt) => {
+          // fetch approved leaves of this type
+          const { data: requests } = await supabase
+            .from("attendance_requests")
+            .select("start_date, end_date")
+            .eq("user_id", userData.id)
+            .eq("leave_type_id", lt.id)
+            .eq("status", "APPROVED");
+
+          const usedDays =
+            requests?.reduce((acc, req) => {
+              return acc + calculateDays(req.start_date, req.end_date);
+            }, 0) || 0;
+
+          // check limit
+          let available: number | null = null;
+          if (lt.yearly_limit) {
+            available = Math.max(0, lt.yearly_limit - usedDays);
+          } else if (lt.max_days_per_month) {
+            // limit for current month
+            const monthStart = new Date(
+              new Date().getFullYear(),
+              new Date().getMonth(),
+              1
+            );
+            const monthEnd = new Date(
+              new Date().getFullYear(),
+              new Date().getMonth() + 1,
+              0
+            );
+
+            const { data: monthLeaves } = await supabase
+              .from("attendance_requests")
+              .select("start_date, end_date")
+              .eq("user_id", userData.id)
+              .eq("leave_type_id", lt.id)
+              .eq("status", "APPROVED")
+              .gte("start_date", monthStart.toISOString())
+              .lte("end_date", monthEnd.toISOString());
+
+            const monthUsed =
+              monthLeaves?.reduce((acc, req) => {
+                return acc + calculateDays(req.start_date, req.end_date);
+              }, 0) || 0;
+
+            available = Math.max(0, lt.max_days_per_month - monthUsed);
+          }
+
+          return {
+            ...lt,
+            usedDays,
+            available,
+          };
+        })
+      );
+
+      setLeaveTypes(balances);
     };
 
     fetchDurations();
-    fetchLeaveTypes();
-  }, []);
+    fetchLeaveTypesWithBalance();
+  }, [userData]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -89,8 +160,8 @@ const LeaveRequestModal: React.FC<Props> = ({ onClose }) => {
           reason: formData.reason,
           company_id: userData.company_id,
           user_id: userData.id,
-          duration_id: formData.duration, // dynamic duration id
-          leave_type_id: formData.type,   // ✅ dynamic leave type id
+          duration_id: formData.duration,
+          leave_type_id: formData.type,
         },
       ]);
 
@@ -142,7 +213,7 @@ const LeaveRequestModal: React.FC<Props> = ({ onClose }) => {
               />
             </div>
 
-            {/* Type (dynamic from DB) */}
+            {/* Type (dynamic from DB with balance check) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Type <span className="text-red-500">*</span>
@@ -156,8 +227,16 @@ const LeaveRequestModal: React.FC<Props> = ({ onClose }) => {
               >
                 <option value="">Select Type</option>
                 {leaveTypes.map((lt) => (
-                  <option key={lt.id} value={lt.id}>
-                    {lt.leave_name}
+                  <option
+                    key={lt.id}
+                    value={lt.id}
+                    disabled={lt.available !== null && lt.available <= 0}
+                  >
+                    {lt.leave_name}{" "}
+                    {lt.available !== null
+                      ? `(${lt.available} days left)`
+                      : ""}
+                    {lt.available === 0 ? " - Not Applicable" : ""}
                   </option>
                 ))}
               </select>

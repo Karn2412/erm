@@ -148,6 +148,8 @@ const AttendanceWeeklyTable: React.FC<AttendanceWeeklyTableProps> = ({
       check_in_longitudes: checkInLong ? [checkInLong] : null,
       check_out_latitudes: checkOutLat ? [checkOutLat] : null,
       check_out_longitudes: checkOutLong ? [checkOutLong] : null,
+      leave_name: dbEntry.leave_name,
+      leaveColor: dbEntry.leaveColor,
     };
   }
 
@@ -247,8 +249,17 @@ const AttendanceWeeklyTable: React.FC<AttendanceWeeklyTableProps> = ({
                  <td className="px-4 py-3 rounded-r-xl">
   <div className="flex items-center space-x-2">
     <span
-      className={`h-2 w-2 rounded-full ${getDotColor(row.status)}`}
-    ></span>
+  className={`h-2 w-2 rounded-full ${
+    !(row.status?.includes("Leave") && (row as any).leaveColor) ? getDotColor(row.status) : ""
+  }`}
+  style={{
+    backgroundColor:
+      row.status?.includes("Leave") && (row as any).leaveColor
+        ? (row as any).leaveColor
+        : undefined,
+  }}
+></span>
+
     <span className="text-sm font-medium text-gray-700">
       {row.status}
     </span>

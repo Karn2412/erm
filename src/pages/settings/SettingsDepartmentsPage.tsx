@@ -6,6 +6,7 @@ import AssetsTable from "../../components/settings/AssetsTable";
 import WorkLocations from "../../components/settings/WorkLocations";
 import OrganisationProfile from "../../components/settings/OrganisationProfile";
 import DesignationsTable from "../../components/settings/DesignationsTable";
+import LeaveTypesTable from "../../components/settings/LeaveTypesTable";
 
 const SettingsPage: React.FC = () => {
   const [active, setActive] = useState("Departments"); // default section
@@ -22,6 +23,8 @@ const SettingsPage: React.FC = () => {
       return <OrganisationProfile />; 
       case "Designations":
         return <DesignationsTable />;
+      case 'Leave Types':
+        return <LeaveTypesTable />;  
       default:
         return <p className="text-gray-500">Coming soon...</p>;
     }
