@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { supabase } from "../../../../supabaseClient";
 import { FaTimes } from "react-icons/fa";
+import toast from "react-hot-toast";
 
 const EmployeeModal = ({
   employee,
@@ -179,7 +180,7 @@ const [weeklyOffsNote, setWeeklyOffsNote] = useState("");
 
         setWorkHours(whData);
 
-
+       //Weekly Offs
         const { data: weeklyOffsData, error: weeklyOffsError } = await supabase
   .from("user_weekly_offs")
   .select("weekly_offs, description, updated_at")
@@ -192,6 +193,27 @@ if (weeklyOffsError) {
 if (weeklyOffsData) {
   setWeeklyOffs(weeklyOffsData.weekly_offs || []);
   setWeeklyOffsDetails(weeklyOffsData);
+}
+
+
+// Salary Details (latest entry)
+const { data: salaryData, error: salaryError } = await supabase
+  .from("salary_details")
+  .select("monthly_ctc, regime_it, employee_pf, esi_coverage, created_at")
+  .eq("user_id", employee.id)
+  .order("created_at", { ascending: false })
+  .limit(1)
+  .maybeSingle();
+  console.log(salaryData);
+  
+
+if (salaryError) {
+  console.error("Error fetching salary details:", salaryError.message);
+}
+if (salaryData) {
+  setSalaryAmount(salaryData.monthly_ctc?.toString() || "");
+  // if you want to support different currencies, you may need to store it in db
+  setSalaryCurrency("INR"); 
 }
 
 
@@ -397,7 +419,7 @@ if (weeklyOffsData) {
       if (selectedAssetId && (pickedAsset?.status === 'allocated') && allocatedMap[selectedAssetId] && allocatedMap[selectedAssetId] !== employee.id) {
         const otherUserId = allocatedMap[selectedAssetId];
         const otherName = allEmployees.find((e) => e.id === otherUserId)?.name || otherUserId;
-        alert(`❌ Cannot allocate "${pickedAsset?.name || 'asset'}". It's already allocated to ${otherName}.`);
+        toast.error(`❌ Cannot allocate "${pickedAsset?.name || 'asset'}". It's already allocated to ${otherName}.`);
         return;
       }
 
@@ -519,14 +541,14 @@ if (weeklyOffsError) {
       }
 
       if (somethingChanged) {
-        alert("✅ Changes saved successfully!");
+        toast.success("✅ Changes saved successfully!");
         onUpdated();
       } else {
-        alert("ℹ No changes to save.");
+        toast.loading("ℹ No changes to save.");
       }
     } catch (err: any) {
       console.error(err);
-      alert(`❌ ${err.message}`);
+      toast.error(`❌ ${err.message}`);
     }
   };
   // -------------------------------------------------------------------------------
@@ -534,7 +556,7 @@ if (weeklyOffsError) {
   // Relocate logic unchanged, but refresh snapshot after relocate
   const handleRelocate = async () => {
     if (!relocateAsset || !relocateTo) {
-      alert("Select both fields");
+      toast("Select both fields");
       return;
     }
 
@@ -551,14 +573,14 @@ if (weeklyOffsError) {
 
     if (error) {
       console.error(error);
-      alert("❌ Failed to relocate asset");
+      toast.error("❌ Failed to relocate asset");
       return;
     }
 
     // asset stays allocated — but we refresh snapshots to show new owner
     await fetchAssetsAndEmployees();
 
-    alert("✅ Asset relocated successfully!");
+    toast.success("✅ Asset relocated successfully!");
     onUpdated();
   };
 
@@ -577,7 +599,7 @@ const handleRemoveAsset = async (assetId: string) => {
 
     if (retErr) {
       console.error("Failed to mark allocation returned:", retErr);
-      alert("❌ Failed to mark allocation returned: " + retErr.message);
+      toast.error("❌ Failed to mark allocation returned: " + retErr.message);
       return;
     }
 
@@ -589,7 +611,7 @@ const handleRemoveAsset = async (assetId: string) => {
 
     if (statusErr) {
       console.error("Failed to update asset status:", statusErr);
-      alert("❌ Failed to update asset status: " + statusErr.message);
+      toast.error("❌ Failed to update asset status: " + statusErr.message);
       return;
     }
 
@@ -630,17 +652,17 @@ const handleRemoveAsset = async (assetId: string) => {
       }
     }
 
-    alert("✅ Asset removed and marked available.");
+    toast.success("✅ Asset removed and marked available.");
     onUpdated();
   } catch (err: any) {
     console.error("Error removing asset:", err);
-    alert("❌ Error removing asset: " + (err?.message || err));
+    toast.error("❌ Error removing asset: " + (err?.message || err));
   }
 };
   // ---------- DELETE employee ----------
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure? This will permanently delete the user.")) return;
+    if (!toast.loading("Are you sure? This will permanently deactivate the user.")) return;
 
     try {
       const session = await supabase.auth.getSession();
@@ -660,11 +682,11 @@ const handleRemoveAsset = async (assetId: string) => {
 
       if (!res.ok) throw new Error("Delete failed");
 
-      alert("✅ User deleted successfully!");
+      toast.success("✅ User deleted successfully!");
       onUpdated();
     } catch (err) {
       console.error(err);
-      alert("❌ Failed to delete user");
+      toast.error("❌ Failed to delete user");
     }
   };
 
@@ -735,6 +757,23 @@ const handleRemoveAsset = async (assetId: string) => {
 ) : (
   <p className="text-gray-500 text-sm mb-6">No weekly offs set</p>
 )}
+
+{/* Current Salary */}
+<h3 className="text-lg font-semibold text-gray-800 mb-2">Current Salary</h3>
+{salaryAmount ? (
+  <div className="text-gray-700 text-sm bg-yellow-50 p-3 rounded-lg mb-6">
+    <b>CTC:</b> {salaryAmount} {salaryCurrency}
+    <br />
+    <b>PF:</b> Yes
+    <br />
+    <b>ESI:</b> No
+    <br />
+    <b>Regime:</b> Old
+  </div>
+) : (
+  <p className="text-gray-500 text-sm mb-6">No salary set</p>
+)}
+
 
 
           {/* Update Working Hours */}

@@ -144,7 +144,7 @@ const staff = employees.filter((e) => e.user_role?.toLowerCase() === "staff");
     className="bg-gray-50 cursor-pointer"
     onClick={() => setShowAdmin(!showAdmin)}
   >
-    <div className="flex items-center justify-between px-4 py-2 font-medium text-gray-700">
+    <div className="flex items-center justify-between text-xs px-4 py-2 font-medium text-gray-700">
       <div className="flex items-center">
         {showAdmin ? (
           <FaChevronDown className="mr-2" />
@@ -193,7 +193,7 @@ const staff = employees.filter((e) => e.user_role?.toLowerCase() === "staff");
     className="bg-gray-50 cursor-pointer"
     onClick={() => setShowStaff(!showStaff)}
   >
-    <div className="flex items-center justify-between px-4 py-2 font-medium text-gray-700">
+    <div className="flex items-center justify-between px-4 py-2 text-xs font-medium text-gray-700">
       <div className="flex items-center">
         {showStaff ? (
           <FaChevronDown className="mr-2" />

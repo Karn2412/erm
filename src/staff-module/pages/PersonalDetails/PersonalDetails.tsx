@@ -7,6 +7,7 @@ import BankingDetailsForm from "../../components/personaldetails/BankingDetailFo
 import DocumentUploadForm from "../../components/personaldetails/DocumentUploadForm";
 import { supabase } from "../../../supabaseClient";
 import { useUser } from "../../../context/UserContext";
+import toast from "react-hot-toast";
 
 const PersonalDetailsPage: React.FC = () => {
   const { userData } = useUser();
@@ -55,7 +56,7 @@ const handleSubmit = async () => {
     const userId = authUser?.user?.id;
 
     if (!userId) {
-      alert("User not logged in");
+      toast.error("User not logged in");
       return;
     }
 
@@ -67,7 +68,7 @@ const handleSubmit = async () => {
 
     const companyId = profile?.company_id;
     if (!companyId) {
-      alert("No company assigned to this user.");
+      toast.error("No company assigned to this user.");
       return;
     }
 
@@ -135,10 +136,10 @@ const handleSubmit = async () => {
 
     if (error) throw error;
 
-    alert("Details submitted/updated successfully!");
+    toast.success("Details submitted/updated successfully!");
   } catch (error) {
     console.error("Submit Error:", error);
-    alert("Submission failed.");
+    toast.error("Submission failed.");
   }
 };
 ;
@@ -253,7 +254,7 @@ const handleSubmit = async () => {
           (currentSection === 1 && !validateBasicDetails()) ||
           (currentSection === 2 && !validateBankingDetails())
         ) {
-          alert("⚠️ Please fill all mandatory fields before continuing.");
+          toast.loading("⚠️ Please fill all mandatory fields before continuing.");
           return;
         }
         setCurrentSection((prev) => prev + 1);
@@ -268,7 +269,7 @@ const handleSubmit = async () => {
     <button
       onClick={() => {
         if (!validateDocuments()) {
-          alert("⚠️ Please upload all required documents before submitting.");
+          toast.loading("⚠️ Please upload all required documents before submitting.");
           return;
         }
         handleSubmit();

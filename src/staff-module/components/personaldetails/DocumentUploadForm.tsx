@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../../supabaseClient";
 import { FaUpload } from "react-icons/fa";
+import toast from "react-hot-toast";
 
 interface Document {
   name: string;
@@ -89,9 +90,10 @@ console.log(newDocFile);
           .update({ documents: updatedDocs })
           .eq("id", userId);
       }
+      toast.success("Document uploaded successfully.");
     } catch (err) {
       console.error("Upload Error:", err);
-      alert("Failed to upload document.");
+      toast.error("Failed to upload document.");
     }
   };
 
@@ -117,9 +119,10 @@ console.log(newDocFile);
           .update({ documents: updatedDocs })
           .eq("id", userId);
       }
+      toast.success("Document deleted successfully.");
     } catch (err) {
       console.error("Delete Error:", err);
-      alert("Failed to delete document.");
+      toast.error("Failed to delete document.");
     }
   };
 

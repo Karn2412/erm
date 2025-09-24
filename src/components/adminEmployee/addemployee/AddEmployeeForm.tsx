@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../../supabaseClient";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import toast from "react-hot-toast";
 
 interface AddEmployeeFormProps {
   onEmployeeCreated: (userId: string, companyId: string, doj: string) => void;
@@ -195,18 +196,18 @@ const toggleDay = (day: number) => {
     } = await supabase.auth.getSession();
 
     if (sessionError || !session?.access_token) {
-      alert("Session not found. Please login again.");
+      toast.error("Session not found. Please login again.");
       setLoading(false);
       return;
     }
 
     if (!formData.department_id) {
-      alert("Please select a department.");
+      toast.loading("Please select a department.");
       setLoading(false);
       return;
     }
     if (!formData.gender_id) {
-      alert("Please select a gender.");
+      toast.loading("Please select a gender.");
       setLoading(false);
       return;
     }
@@ -218,7 +219,7 @@ const toggleDay = (day: number) => {
       error: userError,
     } = await supabase.auth.getUser();
     if (userError || !user) {
-      alert("Failed to get current user.");
+      toast.error("Failed to get current user.");
       setLoading(false);
       return;
     }
@@ -230,7 +231,7 @@ const toggleDay = (day: number) => {
       .single();
 
     if (roleError || !roleRecord) {
-      alert("User role not found.");
+      toast.error("User role not found.");
       setLoading(false);
       return;
     }
@@ -278,9 +279,9 @@ const toggleDay = (day: number) => {
 
     if (!response.ok) {
       if (result.error === "Email already exists") {
-        alert("❌ This email is already registered. Please use another one.");
+        toast.error("❌ This email is already registered. Please use another one.");
       } else {
-        alert(`❌ Failed: ${result.error}`);
+        toast.error(`❌ Failed: ${result.error}`);
       }
       setLoading(false);
       return; // 🚫 stop here, don’t try inserting working hours
@@ -301,9 +302,9 @@ const toggleDay = (day: number) => {
       ]);
 
     if (workHoursError) {
-      alert(`⚠️ Employee created, but failed to set working hours: ${workHoursError.message}`);
+      toast.error(`⚠️ Employee created, but failed to set working hours: ${workHoursError.message}`);
     } else {
-      alert("✅ Employee and working hours added successfully!");
+      toast.success("✅ Employee and working hours added successfully!");
     }
 
     onEmployeeCreated(newUserId, companyId, formattedDate);
@@ -325,7 +326,7 @@ const toggleDay = (day: number) => {
       work_location: "",
     });
   } catch (err: any) {
-    alert("Unexpected error: " + err.message);
+    toast.error("Unexpected error: " + err.message);
   } finally {
     setLoading(false); // ✅ always stop loading
   }

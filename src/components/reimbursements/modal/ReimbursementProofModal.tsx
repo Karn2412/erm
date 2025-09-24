@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { supabase } from '../../../supabaseClient';
+import toast from 'react-hot-toast';
 
 interface ReimbursementProofModalProps {
   reimbursementId: string;   // 👈 which reimbursement we’re updating
@@ -44,7 +45,7 @@ const ReimbursementProofModal: React.FC<ReimbursementProofModalProps> = ({
   const handleUpdate = async (status: 'APPROVED' | 'REJECTED') => {
     if (status === 'APPROVED') {
       if (!approvedAmount || approvedAmount <= 0) {
-        alert('⚠️ Please enter a valid reimbursement amount');
+        toast.error('⚠️ Please enter a valid reimbursement amount');
         return;
       }
       const confirm = window.confirm(
@@ -71,9 +72,9 @@ const ReimbursementProofModal: React.FC<ReimbursementProofModalProps> = ({
 
     if (error) {
       console.error(`❌ Failed to ${status.toLowerCase()} reimbursement:`, error);
-      alert('Error updating reimbursement');
+      toast.error('Error updating reimbursement');
     } else {
-      alert(`✅ Reimbursement ${status.toLowerCase()} successfully`);
+      toast.success(`✅ Reimbursement ${status.toLowerCase()} successfully`);
       if (onActionComplete) onActionComplete();
       onClose();
     }

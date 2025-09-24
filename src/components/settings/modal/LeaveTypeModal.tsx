@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FaTimes } from "react-icons/fa";
 import type { LeaveType } from "../../../types/leavetypes";
+import toast from "react-hot-toast";
 
 interface Props {
   isOpen: boolean;
@@ -63,7 +64,7 @@ const LeaveTypeModal: React.FC<Props> = ({
   };
 
   const handleSubmit = () => {
-    if (!formData.leave_name) return alert("Leave name is required!");
+    if (!formData.leave_name) return toast.error("Leave name is required!");
     onSaved(formData, !!leaveType); // ✅ send raw formData
     onClose();
   };

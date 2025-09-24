@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../../supabaseClient";
 import { FaUsers, FaEdit } from "react-icons/fa";
 import { useUser } from "../../context/UserContext"; // Adjust path to your UserContext
+import toast from "react-hot-toast";
 
 // Hardcoded districts remain
 const districts = {
@@ -90,7 +91,7 @@ const getStateName = (stateId: string) => states.find((s) => s.id === stateId)?.
     e.preventDefault();
 
     if (!userData?.company_id) {
-      alert("❌ Company not found for logged-in user.");
+      toast.error("❌ Company not found for logged-in user.");
       return;
     }
 
@@ -111,10 +112,10 @@ const getStateName = (stateId: string) => states.find((s) => s.id === stateId)?.
         .eq("id", editing.id);
 
       if (error) {
-        alert("❌ Failed to update location");
+        toast.error("❌ Failed to update location");
         console.error(error);
       } else {
-        alert("✅ Location updated!");
+        toast.success("✅ Location updated!");
         setEditing(null);
         setShowForm(false);
         fetchLocations();
@@ -122,10 +123,10 @@ const getStateName = (stateId: string) => states.find((s) => s.id === stateId)?.
     } else {
       const { error } = await supabase.from("work_locations").insert([dataToSubmit]);
       if (error) {
-        alert("❌ Failed to add location");
+        toast("❌ Failed to add location");
         console.error(error);
       } else {
-        alert("✅ Location added!");
+        toast.success("✅ Location added!");
         setShowForm(false);
         fetchLocations();
       }

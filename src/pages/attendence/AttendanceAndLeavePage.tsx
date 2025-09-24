@@ -48,6 +48,7 @@ const AttendanceAndLeavePage: React.FC = () => {
         .from("employee_attendance_summary")
         .select("*")
         .eq("company_id", companyId)
+        
         .eq("attendance_date", selectedDate);
 
       if (error) throw error;

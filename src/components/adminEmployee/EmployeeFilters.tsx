@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { MdApartment } from "react-icons/md";
-import { FaMapMarkerAlt, FaUserTie, FaFilter, FaChevronDown, FaCheck } from "react-icons/fa";
+import { FaMapMarkerAlt, FaUserTie, FaFilter, FaChevronDown, FaCheck, FaTimes } from "react-icons/fa";
 import { supabase } from "../../supabaseClient";
 import { useUser } from "../../context/UserContext";
 
@@ -26,7 +26,7 @@ const EmployeeFilters = ({
   workLocation,
   setWorkLocation,
   statusFilter,
-  setStatusFilter,   // 👈 new prop
+  setStatusFilter,
 }: {
   department: string;
   setDepartment: (val: string) => void;
@@ -47,7 +47,6 @@ const EmployeeFilters = ({
   useEffect(() => {
     const fetchDepartments = async () => {
       if (!userData?.company_id) return;
-
       const { data, error } = await supabase
         .from("departments")
         .select("id, department_name")
@@ -62,7 +61,6 @@ const EmployeeFilters = ({
   useEffect(() => {
     const fetchWorkLocations = async () => {
       if (!userData?.company_id) return;
-
       const { data, error } = await supabase
         .from("work_locations")
         .select("id, name")
@@ -89,6 +87,50 @@ const EmployeeFilters = ({
     setOpenDropdown(openDropdown === name ? null : name);
   };
 
+  // Get selected filter labels
+  const selectedFilters: { label: string; onRemove: () => void }[] = [];
+
+  if (workLocation) {
+    const loc = workLocations.find((l) => l.id === workLocation);
+    if (loc) {
+      selectedFilters.push({
+        label: `Work Location: ${loc.name}`,
+        onRemove: () => setWorkLocation(""),
+      });
+    }
+  }
+
+  if (department) {
+    const dep = departments.find((d) => d.id === department);
+    if (dep) {
+      selectedFilters.push({
+        label: `Department: ${dep.department_name}`,
+        onRemove: () => setDepartment(""),
+      });
+    }
+  }
+
+  if (designation) {
+    const des = designations.find((d) => d.id === designation);
+    if (des) {
+      selectedFilters.push({
+        label: `Designation: ${des.designation}`,
+        onRemove: () => setDesignation(""),
+      });
+    }
+  }
+
+  if (statusFilter !== "all") {
+    selectedFilters.push({
+      label:
+        statusFilter === "active"
+          ? "Status: Active"
+          : statusFilter === "inactive"
+          ? "Status: Inactive"
+          : "",
+      onRemove: () => setStatusFilter("all"),
+    });
+  }
   
 
   return (
@@ -336,6 +378,37 @@ const EmployeeFilters = ({
       </div>
     )}
   </div>
+  
+{/* Selected Filters */}
+{selectedFilters.length > 0 && (
+  <div className="col-span-full">
+    <div className="flex items-center gap-2 mt-2 w-full overflow-x-auto flex-nowrap no-scrollbar">
+      <span className="text-sm font-semibold text-gray-600 flex-shrink-0">
+        Filters:
+      </span>
+      <div className="flex gap-2 flex-nowrap">
+        {selectedFilters.map((filter, idx) => (
+          <div
+            key={idx}
+            className="flex items-center gap-2 bg-violet-100 px-3 py-1 rounded-full text-sm text-violet-700 shadow flex-shrink-0"
+          >
+            {filter.label}
+            <button
+              onClick={filter.onRemove}
+              className="text-violet-600 hover:text-violet-800"
+            >
+              <FaTimes size={12} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
+
+
+
+
 
     </div>
   );

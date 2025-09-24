@@ -16,6 +16,7 @@ interface AttendanceWeeklyTableProps {
   onRequestLeave?: (date: string) => void;
   onRequestWFH?: (date: string) => void;
   onRequestApprovedOff?: (date: string) => void;
+
 }
 
 const weekDays = [
@@ -149,7 +150,7 @@ const AttendanceWeeklyTable: React.FC<AttendanceWeeklyTableProps> = ({
       check_out_latitudes: checkOutLat ? [checkOutLat] : null,
       check_out_longitudes: checkOutLong ? [checkOutLong] : null,
       leave_name: dbEntry.leave_name,
-      leaveColor: dbEntry.leaveColor,
+      leave_color: dbEntry.leave_color,
     };
   }
 
@@ -168,6 +169,10 @@ const AttendanceWeeklyTable: React.FC<AttendanceWeeklyTableProps> = ({
     check_out_latitudes: null,
     check_out_longitudes: null,
     status,
+    first_check_in_time: null,
+    last_check_out_time: null,
+    leave_name: undefined,
+    leave_color: undefined,
   };
 });
 
@@ -216,6 +221,8 @@ const AttendanceWeeklyTable: React.FC<AttendanceWeeklyTableProps> = ({
               const checkInLong = row.check_in_longitudes?.[0] ?? null;
               const checkOutLat = row.check_out_latitudes?.[0] ?? null;
               const checkOutLong = row.check_out_longitudes?.[0] ?? null;
+              console.log("Row data:", row);
+              
 
               return (
                 <tr
@@ -250,18 +257,26 @@ const AttendanceWeeklyTable: React.FC<AttendanceWeeklyTableProps> = ({
   <div className="flex items-center space-x-2">
     <span
   className={`h-2 w-2 rounded-full ${
-    !(row.status?.includes("Leave") && (row as any).leaveColor) ? getDotColor(row.status) : ""
+    !(row.status?.includes("Leave") && (row as any).leave_color) ? getDotColor(row.status) : ""
   }`}
   style={{
     backgroundColor:
-      row.status?.includes("Leave") && (row as any).leaveColor
-        ? (row as any).leaveColor
+      row.status?.includes("Leave") && (row as any).leave_color
+        ? (row as any).leave_color
         : undefined,
   }}
 ></span>
 
-    <span className="text-sm font-medium text-gray-700">
-      {row.status}
+    <span  className={`inline-block px-2 py-1 rounded text-xs font-semibold text-white  ${!(row.status.includes("Leave") && row?.leave_color) ? getDotColor(row.status) : ""
+                            }`}
+                          style={{
+                            backgroundColor:
+                              row.status.includes("Leave") && row?.leave_color
+                                ? row.leave_color // ✅ custom leave color
+                                : undefined,
+                          }}>
+      {/* if leave_name is defined, show it */}
+      {row.leave_name ? row.leave_name : row.status}
     </span>
   </div>
 </td>

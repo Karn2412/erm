@@ -6,6 +6,7 @@ import AddEmployeeForm from "../../components/adminEmployee/addemployee/AddEmplo
 import SalaryDetails from "../../components/adminEmployee/addemployee/SalaryDetails";
 import AssetAllocationForm from "../../components/adminEmployee/addemployee/AssetAllocationForm";
 import PaymentInformationForm from "../../components/adminEmployee/addemployee/PaymentInformationForm";
+import toast from "react-hot-toast";
 
 const AddEmployeePage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -70,7 +71,7 @@ const AddEmployeePage: React.FC = () => {
             companyId={employeeData.companyId}
             onComplete={() => {
               markStepComplete(4);
-              alert("🎉 Employee fully added!");
+              toast.success("🎉 Employee fully added!");
               navigate("/employees"); // force exit only after completion
             }}
           />
@@ -150,7 +151,7 @@ const AddEmployeePage: React.FC = () => {
                 <button
                   onClick={() => {
                     if (completedSteps.includes(4)) {
-                      alert("🎉 Employee fully added!");
+                      toast("🎉 Employee fully added!");
                       navigate("/employees");
                     }
                   }}

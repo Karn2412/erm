@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { supabase } from "../../../supabaseClient";
 import { useUser } from "../../../context/UserContext";
+import toast from "react-hot-toast";
 
 
 interface Props {
@@ -22,7 +23,7 @@ const DesignationModal: React.FC<Props> = ({ onClose, onSaved }) => {
 
     if (error) {
       console.error("Insert failed:", error);
-      alert("Failed to save designation");
+      toast.error("Failed to save designation");
     } else {
       onSaved(); // refresh table
       onClose(); // close modal

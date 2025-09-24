@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { FiSend } from "react-icons/fi";
 import { useUser } from "../../../context/UserContext";
 import { supabase } from "../../../supabaseClient";
+import toast from "react-hot-toast";
 
 type Props = {
   onClose: () => void;
@@ -32,7 +33,7 @@ const RegularizationRequestModal: React.FC<Props> = ({ onClose }) => {
   // Prevent rendering if IDs are missing (avoids UUID "" error)
   if (!userData.company_id || !userData.id) {
     console.error("Missing user or company ID");
-    alert(
+    toast.error(
       "Missing user or company information. Please try logging in again."
     );
     return null;
@@ -61,12 +62,12 @@ const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
 
   if (!formData.day || !formData.checkIn || !formData.checkOut || !formData.date || !formData.reason) {
-    alert("Please fill in all required fields");
+    toast.error("Please fill in all required fields");
     return;
   }
 
   if (!userData.company_id || !userData.id || userData.company_id.length !== 36 || userData.id.length !== 36) {
-    alert("Invalid user or company ID");
+    toast.error("Invalid user or company ID");
     return;
   }
 
@@ -94,11 +95,13 @@ const payload = {
     if (error) throw error;
 
     console.log("✅ Regularization request submitted successfully!");
+    toast.success("Regularization request submitted successfully!");
+    // Reset form
     setFormData({ day: "", checkIn: "", checkOut: "", date: "", reason: "" });
     onClose();
   } catch (err: any) {
     console.error("❌ Submit error:", err);
-    alert(err.message || "Failed to submit regularization request");
+    toast.error(err.message || "Failed to submit regularization request");
   } finally {
     setLoading(false);
   }

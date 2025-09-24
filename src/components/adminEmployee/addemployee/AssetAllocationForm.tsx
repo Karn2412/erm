@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../../supabaseClient";
+import toast from "react-hot-toast";
 
 interface Props {
   userId: string;
@@ -56,7 +57,7 @@ const AssetAllocationForm: React.FC<Props> = ({ userId, companyId, onComplete })
  const handleSubmit = async () => {
   if (selectedAssets.length === 0 && !uniqueAssets) {
     // ✅ No assets chosen → just move to next step
-    alert("ℹ️ No assets allocated. Proceeding...");
+    toast.loading("ℹ️ No assets allocated. Proceeding...");
     onComplete();
     return;
   }
@@ -73,7 +74,7 @@ const AssetAllocationForm: React.FC<Props> = ({ userId, companyId, onComplete })
     const { error } = await supabase.from("asset_allocations").insert(rows);
 
     if (error) {
-      alert("❌ Allocation failed: " + error.message);
+      toast.error("❌ Allocation failed: " + error.message);
       return;
     }
 
@@ -82,8 +83,8 @@ const AssetAllocationForm: React.FC<Props> = ({ userId, companyId, onComplete })
       .from("assets")
       .update({ status: "allocated" })
       .in("id", selectedAssets);
-
-    alert("✅ Assets allocated successfully");
+    
+    toast.success("✅ Assets allocated successfully");
   } else if (uniqueAssets) {
     // ✅ Only unique asset provided
     const { error } = await supabase.from("asset_allocations").insert([
@@ -96,11 +97,11 @@ const AssetAllocationForm: React.FC<Props> = ({ userId, companyId, onComplete })
     ]);
 
     if (error) {
-      alert("❌ Allocation failed: " + error.message);
+      toast.error("❌ Allocation failed: " + error.message);
       return;
     }
 
-    alert("✅ Unique asset recorded successfully");
+    toast.success("✅ Unique asset recorded successfully");
   }
 
   setSelectedAssets([]);

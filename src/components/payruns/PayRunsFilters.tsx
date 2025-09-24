@@ -1,5 +1,5 @@
 import React from "react";
-import { FaSearch, FaHistory } from "react-icons/fa";
+import { FaSearch, FaHistory, FaCalendarAlt } from "react-icons/fa";
 
 interface Props {
   selectedMonth: string;
@@ -34,7 +34,6 @@ const PayRunsFilters: React.FC<Props> = ({
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="flex-1 bg-transparent focus:outline-none cursor-pointer"
               />
-
             </div>
           </div>
 
@@ -68,20 +67,35 @@ const PayRunsFilters: React.FC<Props> = ({
         </div>
       </div>
 
-      <button
-        onClick={() => {
-          const [year, month] = selectedMonth.split("-");
-          const prevMonth = new Date(Number(year), Number(month) - 2);
-          // -2 because JS months are 0-based
-          const formatted = prevMonth.toISOString().slice(0, 7); // YYYY-MM
-          setSelectedMonth(formatted);
-        }}
-        className="flex items-center bg-[#00AEEF] text-white px-4 py-2 rounded-full text-sm mt-6"
-      >
-        Show Past
-        <FaHistory className="ml-1 text-xs" />
-      </button>
+      {/* Buttons */}
+      <div className="flex gap-3 mt-6">
+        {/* Current Month Button */}
+        <button
+          onClick={() => {
+            const now = new Date();
+            const formatted = now.toISOString().slice(0, 7); // YYYY-MM
+            setSelectedMonth(formatted);
+          }}
+          className="flex items-center bg-green-600 text-white px-4 py-2 rounded-full text-sm"
+        >
+          Current Month
+          <FaCalendarAlt className="ml-1 text-xs" />
+        </button>
 
+        {/* Show Past Button */}
+        <button
+          onClick={() => {
+            const [year, month] = selectedMonth.split("-");
+            const prevMonth = new Date(Number(year), Number(month) - 2);
+            const formatted = prevMonth.toISOString().slice(0, 7);
+            setSelectedMonth(formatted);
+          }}
+          className="flex items-center bg-[#00AEEF] text-white px-4 py-2 rounded-full text-sm"
+        >
+          Show Past
+          <FaHistory className="ml-1 text-xs" />
+        </button>
+      </div>
     </div>
   );
 };

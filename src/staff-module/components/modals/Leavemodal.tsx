@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FiSend } from "react-icons/fi";
 import { useUser } from "../../../context/UserContext";
 import { supabase } from "../../../supabaseClient";
+import { toast } from "react-hot-toast";
 
 type Props = {
   onClose: () => void;
@@ -145,7 +146,7 @@ const LeaveRequestModal: React.FC<Props> = ({ onClose }) => {
       !formData.date ||
       !formData.reason
     ) {
-      alert("Please fill in all required fields");
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -168,11 +169,13 @@ const LeaveRequestModal: React.FC<Props> = ({ onClose }) => {
       if (error) throw error;
 
       console.log("✅ Leave request submitted successfully!");
+      toast.success("Leave request submitted successfully!");
+      // Reset form
       setFormData({ day: "", type: "", duration: "", date: "", reason: "" });
       onClose();
     } catch (err: any) {
       console.error("❌ Submit error:", err);
-      alert(err.message || "Failed to submit leave request");
+      toast.error(err.message || "Failed to submit leave request");
     } finally {
       setLoading(false);
     }

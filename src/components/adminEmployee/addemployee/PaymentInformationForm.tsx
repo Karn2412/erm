@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { supabase } from "../../../supabaseClient";
 import { FaUniversity, FaMoneyCheck, FaMoneyBill } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 interface Props {
   userId: string;
@@ -19,9 +20,9 @@ const navigate = useNavigate();
     ]);
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
     } else {
-      alert("✅ Payment preference saved");
+      toast.success("✅ Payment preference saved");
 
       // Call parent onComplete if provided
       if (onComplete) {

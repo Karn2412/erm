@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { supabase } from "../../../supabaseClient";
+import toast from "react-hot-toast";
 ; // your Supabase client import
 
 interface SalaryDetailsFormProps {
@@ -38,7 +39,7 @@ const SalaryDetailsForm: React.FC<SalaryDetailsFormProps> = ({ userId, companyId
     e.preventDefault();
 
     if (!monthlyCTC || !dateOfJoining) {
-      alert("Please fill in Date of Joining and CTC");
+      toast.loading("Please fill in Date of Joining and CTC");
       return;
     }
 
@@ -64,10 +65,10 @@ const SalaryDetailsForm: React.FC<SalaryDetailsFormProps> = ({ userId, companyId
 
     if (error) {
       console.error(error);
-      alert("Error saving salary details");
+      toast.error("Error saving salary details");
     } else {
-      alert("Salary details saved successfully!");
-      onComplete(); 
+      toast.success("Salary details saved successfully!");
+      onComplete();
     }
   };
 

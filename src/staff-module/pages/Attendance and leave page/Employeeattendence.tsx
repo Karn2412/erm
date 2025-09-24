@@ -164,6 +164,9 @@ const EmployeeAttendancePage = () => {
           request_status: dbEntry?.request_status || null,
           checkInLocation: dbEntry?.checkInLocation || null,
           checkOutLocation: dbEntry?.checkOutLocation || null,
+          weekly_offs: weeklyOffDays,
+          leave_color: dbEntry?.leave_color || null,
+          leave_name: dbEntry?.leave_name || null,
         } as AttendanceRecord);
       }
 
@@ -327,6 +330,11 @@ const EmployeeAttendancePage = () => {
                         if (found.request_type && found.request_status === "APPROVED") {
                           if (found.request_type === "LEAVE") status = `${found.attendance_statuses
  || "Approved Leave"} `;
+                         // getting leave_color from DB entry if available
+                          if (found.request_type === "LEAVE" && found.leave_color) {
+                            // Use leave_color from DB
+                            console.log("Applying leave_color from DB:", found.leave_color);
+                          }
                           if (found.request_type === "WFH") status = "Work From Home";
                           if (found.request_type === "WEEKLY OFF") status = "Weekly Off";
                           console.log("Found entry:", found, "Resolved status:", status);
@@ -445,12 +453,12 @@ const EmployeeAttendancePage = () => {
                           {/* Status footer */}
 <div
   className={`text-[13px] rounded-b-xl font-semibold text-white text-center py-1 ${
-    !(found?.request_type === "LEAVE" && found?.leaveColor) ? getColorBg(status) : ""
+    !(found?.request_type === "LEAVE" && found?.leave_color) ? getColorBg(status) : ""
   }`}
   style={{
     backgroundColor:
-      found?.request_type === "LEAVE" && found?.leaveColor
-        ? found.leaveColor
+      found?.request_type === "LEAVE" && found?.leave_color
+        ? found.leave_color
         : undefined,
   }}
 >

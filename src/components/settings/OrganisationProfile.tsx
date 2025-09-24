@@ -8,6 +8,7 @@ import { UserContext } from "../../context/UserContext";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../../redux/store";
 import { setCompany } from "../../redux/companySlice";
+import toast from "react-hot-toast";
 
 interface Location {
   id: string;
@@ -168,7 +169,7 @@ const OrganisationProfile: React.FC = () => {
 
   const handleSave = async () => {
   if (!orgName.trim()) {
-    alert("Organisation name cannot be empty!");
+    toast.error("Organisation name cannot be empty!");
     return; // Stop further execution
   }
 
@@ -177,7 +178,7 @@ const OrganisationProfile: React.FC = () => {
 
   const companyId = userData?.company_id;
   if (!companyId) {
-    alert("No company linked to this user!");
+    toast.error("No company linked to this user!");
     setLoading(false);
     return;
   }
@@ -199,9 +200,9 @@ const OrganisationProfile: React.FC = () => {
 
   if (error) {
     console.error("Save failed:", error);
-    alert("Save failed, please check console");
+    toast.error("Save failed, please check console");
   } else {
-    alert("Saved successfully!");
+    toast.success("Saved successfully!");
     setLogoUrl(uploadedLogoUrl || logoUrl);
     dispatch(setCompany({
       id: companyId,
@@ -425,10 +426,10 @@ const OrganisationProfile: React.FC = () => {
                 .eq("id", userData.company_id);
 
               if (error) {
-                alert("Failed to save contact info");
+                toast("Failed to save contact info");
                 console.error(error);
               } else {
-                alert("Contact info updated successfully!");
+                toast("Contact info updated successfully!");
                 setIsEditingContact(false);
               }
               setLoading(false);

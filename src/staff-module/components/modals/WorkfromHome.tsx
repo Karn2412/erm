@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FiSend } from "react-icons/fi";
 import { useUser } from "../../../context/UserContext";
 import { supabase } from "../../../supabaseClient";
+import { toast } from "react-hot-toast";
 
 type Props = {
   onClose: () => void;
@@ -56,7 +57,7 @@ const WorkFromHomeRequestModal: React.FC<Props> = ({ onClose }) => {
     e.preventDefault();
 
     if (!formData.duration_id || !formData.date || !formData.reason || !formData.location) {
-      alert("Please fill in all required fields");
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -80,6 +81,8 @@ const WorkFromHomeRequestModal: React.FC<Props> = ({ onClose }) => {
       if (error) throw error;
 
       console.log("✅ WFH request submitted successfully!");
+      toast.success("WFH request submitted successfully!");
+      // Reset form
       setFormData({
         duration_id: "",
         date: "",
@@ -89,7 +92,7 @@ const WorkFromHomeRequestModal: React.FC<Props> = ({ onClose }) => {
       onClose();
     } catch (err: any) {
       console.error("❌ Submit error:", err);
-      alert(err.message || "Failed to submit WFH request");
+      toast.error(err.message || "Failed to submit WFH request");
     } finally {
       setLoading(false);
     }
