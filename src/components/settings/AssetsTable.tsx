@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FaDownload, FaEdit } from "react-icons/fa";
+import { FaDownload, FaEdit, FaTrash } from "react-icons/fa";
 import { supabase } from "../../supabaseClient";
 import AddAssetModal from "./modal/AddAssetModal";
 
@@ -8,6 +8,7 @@ interface Asset {
   name: string;
   
   description: string | null;
+  status: string;
 }
 
 const AssetsTable: React.FC = () => {
@@ -33,7 +34,7 @@ const AssetsTable: React.FC = () => {
 
       const { data, error } = await supabase
         .from("assets")
-        .select("id, name, description")
+        .select("id, name, description,status")
         .eq("company_id", adminUser.company_id);
 
       if (error) {
@@ -70,38 +71,85 @@ const AssetsTable: React.FC = () => {
       <div className="bg-blue-50 h-125 rounded-lg shadow p-4">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-gray-600">
-              <th className="py-2">Asset Name</th>
-              
-              <th>Description</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {assets.map((asset, index) => (
-              <tr
-                key={asset.id}
-                className={`${
-                  index % 2 === 0 ? "bg-blue-50" : "bg-blue-100"
-                } hover:bg-blue-200`}
-              >
-                <td className="py-2">{asset.name}</td>
-                
-                <td>{asset.description || "-"}</td>
-                <td>
-                  <button
-                    className="text-blue-600 hover:underline flex items-center"
-                    onClick={() => {
-                      setSelectedAsset(asset);
-                      setShowModal(true);
-                    }}
-                  >
-                    <FaEdit className="mr-1" /> Edit
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+  <tr className="text-left text-gray-600">
+    <th className="py-2">Asset Name</th>
+    <th>Description</th>
+    <th>Status</th>   {/* 👈 real status column */}
+    <th>Actions</th> {/* 👈 edit/delete actions */}
+  </tr>
+</thead>
+<tbody>
+  {assets.map((asset, index) => (
+    <tr
+      key={asset.id}
+      className={`${index % 2 === 0 ? "bg-blue-50" : "bg-blue-100"} hover:bg-blue-200`}
+    >
+      <td className="py-2">{asset.name}</td>
+      <td>{asset.description || "-"}</td>
+      
+      {/* STATUS COLUMN */}
+      <td>
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-medium ${
+            asset.status === "available"
+              ? "bg-green-100 text-green-700"
+              : asset.status === "allocated"
+              ? "bg-yellow-100 text-yellow-700"
+              : asset.status === "under repairing"
+              ? "bg-orange-100 text-orange-700"
+              : "bg-red-100 text-red-700"
+          }`}
+        >
+          {asset.status}
+        </span>
+      </td>
+
+      {/* ACTIONS COLUMN */}
+<td className="flex space-x-3 mt-3 items-center">
+  
+    <>
+      {/* EDIT BUTTON */}
+      <button
+        className="text-blue-600 hover:underline flex items-center"
+        onClick={() => {
+          setSelectedAsset(asset);
+          setShowModal(true);
+        }}
+      >
+        <FaEdit className="mr-1" /> 
+      </button>
+
+      {/* DELETE BUTTON */}
+      <button
+        className="text-red-600 hover:underline flex items-center"
+        onClick={async () => {
+          const confirmDelete = window.confirm(
+            `Are you sure you want to delete "${asset.name}"?`
+          );
+          if (!confirmDelete) return;
+
+          const { error } = await supabase
+            .from("assets")
+            .delete()
+            .eq("id", asset.id);
+
+          if (error) {
+            console.error("Error deleting asset:", error);
+            alert("Failed to delete asset. Try again.");
+          } else {
+            setAssets((prev) => prev.filter((a) => a.id !== asset.id));
+          }
+        }}
+      >
+        <FaTrash className="mr-1" />
+      </button>
+    </>
+  
+</td>
+
+    </tr>
+  ))}
+</tbody>
         </table>
 
         {/* Modal */}

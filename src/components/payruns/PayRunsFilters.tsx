@@ -1,5 +1,8 @@
 import React from "react";
-import { FaSearch, FaHistory, FaCalendarAlt } from "react-icons/fa";
+import { FaSearch, FaHistory, FaCalendarAlt, FaFileExcel } from "react-icons/fa";
+import * as XLSX from "xlsx";
+
+import { supabase } from "../../supabaseClient";
 
 interface Props {
   selectedMonth: string;
@@ -8,6 +11,7 @@ interface Props {
   setPayRange: (v: string) => void;
   search: string;
   setSearch: (v: string) => void;
+  companyId?: string; // ✅ added so we can filter payroll_history
 }
 
 const PayRunsFilters: React.FC<Props> = ({
@@ -17,7 +21,93 @@ const PayRunsFilters: React.FC<Props> = ({
   setPayRange,
   search,
   setSearch,
+  companyId,
 }) => {
+const handleExportToExcel = async () => {
+  try {
+    if (!companyId) {
+      alert("Company ID not found. Please login again.");
+      return;
+    }
+
+    // ✅ Convert selectedMonth (YYYY-MM) into YYYY-MM-01
+    const selectedDate = `${selectedMonth}-01`;
+
+    // ✅ Fetch payroll history only for this month
+    const { data, error } = await supabase
+      .from("payroll_history_view") // use view to get employee names
+      .select(
+        `
+        employee_name,  
+        month,
+        monthly_ctc,
+        daily_expected_hours,
+        working_days,
+        total_worked_hours,
+        base_pay,
+        incentives,
+        reimbursements,
+        deductions,
+        total_pay
+      `
+      )
+      .eq("company_id", companyId)
+      .eq("month", selectedDate);
+
+    if (error) {
+      console.error("❌ Error fetching payroll history:", error);
+      alert("Failed to fetch payroll history data.");
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      alert("No payroll data found for the selected month.");
+      return;
+    }
+
+    // ✅ Format rows for Excel
+    const rows = data.map((row: any, index: number) => ({
+      
+      
+      "SL No": index + 1,
+      "Employee Name": row.employee_name || "N/A",
+      Month: row.month ? new Date(row.month).toISOString().slice(0, 7) : "",
+      "Monthly CTC": row.monthly_ctc,
+      "Daily Expected Hours": row.daily_expected_hours,
+      "Working Days": row.working_days,
+      "Total Worked Hours": row.total_worked_hours,
+      "Base Pay": row.base_pay,
+      "Incentives": row.incentives,
+      "Reimbursements": row.reimbursements,
+      "Deductions": row.deductions,
+      "Total Pay": row.total_pay,
+    }));
+    
+
+    // ✅ Create worksheet & workbook
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Payroll");
+
+    // ✅ Export file for this month
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([wbout], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Payroll_${selectedMonth}.xlsx`; // ✅ only selected month
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("❌ Export failed:", err);
+    alert("Failed to export payroll data.");
+  }
+};
+
+
   return (
     <div className="flex items-start justify-between w-full mb-4">
       <div className="flex flex-col gap-3">
@@ -69,6 +159,15 @@ const PayRunsFilters: React.FC<Props> = ({
 
       {/* Buttons */}
       <div className="flex gap-3 mt-6">
+        {/* Export Excel Button */}
+        <button
+          onClick={handleExportToExcel}
+          className="flex items-center bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-full text-sm"
+        >
+          Export Excel
+          <FaFileExcel className="ml-2 text-lg" />
+        </button>
+
         {/* Current Month Button */}
         <button
           onClick={() => {
@@ -76,7 +175,7 @@ const PayRunsFilters: React.FC<Props> = ({
             const formatted = now.toISOString().slice(0, 7); // YYYY-MM
             setSelectedMonth(formatted);
           }}
-          className="flex items-center bg-green-600 text-white px-4 py-2 rounded-full text-sm"
+          className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full text-sm"
         >
           Current Month
           <FaCalendarAlt className="ml-1 text-xs" />
@@ -90,7 +189,7 @@ const PayRunsFilters: React.FC<Props> = ({
             const formatted = prevMonth.toISOString().slice(0, 7);
             setSelectedMonth(formatted);
           }}
-          className="flex items-center bg-[#00AEEF] text-white px-4 py-2 rounded-full text-sm"
+          className="flex items-center bg-[#00AEEF] hover:bg-[#058fc1] text-white px-4 py-2 rounded-full text-sm"
         >
           Show Past
           <FaHistory className="ml-1 text-xs" />

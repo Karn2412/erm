@@ -14,6 +14,7 @@ interface PayRun {
   reimbursements: number;
   total_pay: number;
   source: "Live" | "History";
+  isApproved?: boolean; // new field
 }
 
 interface Props {
@@ -123,6 +124,37 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search, compan
         }));
       }
 
+      // Inside fetchPayRuns(), after formatting liveData or historyData:
+if (selectedMonth === currentMonth) {
+  // ✅ Get approved payrolls for this month
+  const { data: approvedUsers, error: approvedErr } = await supabase
+    .from("payroll_history")
+    .select("user_id")
+    .eq("month", `${selectedMonth}-01`)
+    .eq("company_id", companyId || "");
+
+  if (approvedErr) {
+    console.error("❌ Approved payroll fetch error:", approvedErr);
+  }
+
+  const approvedSet = new Set(approvedUsers?.map((a) => a.user_id));
+
+  // Merge approval info into formatted data
+  formatted = formatted.map((item) => ({
+    ...item,
+    isApproved: approvedSet.has(item.user_id),
+  }));
+} else {
+  // History payroll → already approved
+  formatted = formatted.map((item) => ({
+    ...item,
+    isApproved: true,
+  }));
+}
+
+setPayRunsData(formatted);
+
+
       // Apply search filter
       if (search) {
         formatted = formatted.filter((p) =>
@@ -156,7 +188,14 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search, compan
     setSelectedUser(userId);
     setShowModal(true);
   };
-  const handleApproveSingle = async (row: PayRun) => {
+const handleApproveSingle = async (row: PayRun) => {
+  // Ask user to confirm
+  const confirm = window.confirm(`Are you sure you want to approve payroll for ${row.employee_name}?`);
+  if (!confirm) {
+    toast("Payroll approval canceled");
+    return; // stop execution
+  }
+
   try {
     const { data: existing } = await supabase
       .from("payroll_history")
@@ -176,7 +215,7 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search, compan
       user_id: row.user_id,
       month: `${selectedMonth}-01`,
       monthly_ctc: row.salary,
-      base_pay: row.total_pay - (row.deductions + row.incentives + row.reimbursements) ,
+      base_pay: row.total_pay - (row.deductions + row.incentives + row.reimbursements),
       incentives: row.incentives,
       reimbursements: row.reimbursements,
       deductions: row.deductions,
@@ -191,7 +230,7 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search, compan
       toast.success("Payroll approved!");
       setPayRunsData((prev) =>
         prev.map((p) =>
-          p.user_id === row.user_id ? { ...p, source: "History" } : p
+          p.user_id === row.user_id ? { ...p, isApproved: true } : p
         )
       );
     }
@@ -200,6 +239,8 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search, compan
     toast.error("Something went wrong");
   }
 };
+
+
 
 
   
@@ -244,18 +285,19 @@ const PayRunsTable: React.FC<Props> = ({ selectedMonth, payRange, search, compan
                     <FaEye />
                   </button>
                 </td>
-                <td className="py-3 px-4">
-  {item.source === "Live" ? (
+   <td className="py-3 px-4">
+  {item.isApproved ? (
+    <span className="text-gray-500 text-xs">Approved</span>
+  ) : (
     <button
       onClick={() => handleApproveSingle(item)}
       className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 text-xs"
     >
       Approve
     </button>
-  ) : (
-    <span className="text-gray-500 text-xs">Approved</span>
   )}
 </td>
+
               </tr>
             ))}
           </tbody>

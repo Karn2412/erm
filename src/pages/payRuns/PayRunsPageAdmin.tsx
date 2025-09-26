@@ -70,7 +70,7 @@ const PayRunsPageAdmin: React.FC = () => {
       <div className="flex-1">
         <div className="p-9 bg-indigo-50">
           <div className="bg-white p-5 rounded-2xl">
-            <h2 className="text-lg font-semibold mb-4">Upcoming Pay Runs</h2>
+            <h2 className="text-lg font-semibold mb-4">Pay Runs</h2>
 
             {/* Filters */}
             <PayRunsFilters
@@ -80,6 +80,7 @@ const PayRunsPageAdmin: React.FC = () => {
               setPayRange={setPayRange}
               search={search}
               setSearch={setSearch}
+              companyId={companyId}
             />
 
             {/* NO company picker shown — we pass the logged-in admin's companyId */}
